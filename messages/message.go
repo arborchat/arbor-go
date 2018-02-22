@@ -1,4 +1,4 @@
-package main
+package messages
 
 import (
 	uuid "github.com/nu7hatch/gouuid"
