@@ -5,7 +5,6 @@ import (
 	"io"
 	"log"
 	"net"
-	"os"
 )
 
 type ArborMessageType uint8
@@ -22,39 +21,30 @@ type ArborMessage struct {
 }
 
 func main() {
-	if len(os.Args) > 1 {
-		//connect to arg 1
-		conn, err := net.Dial("tcp", os.Args[1])
+	messages := NewStore()
+	broadcaster := NewBroadcaster()
+	//serve
+	listener, err := net.Listen("tcp", ":7777")
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println("Server listening on localhost:7777")
+	for {
+		conn, err := listener.Accept()
 		if err != nil {
-			log.Fatalln(err)
+			log.Println(err)
 		}
-		io.Copy(os.Stdout, conn)
-	} else {
-		messages := NewStore()
-		broadcaster := NewBroadcaster()
-		//serve
-		listener, err := net.Listen("tcp", ":7777")
+		broadcaster.Add(conn)
+		go handleClient(conn, messages, broadcaster)
+		m, err := NewMessage("A new client has joined")
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
 		}
-		log.Println("Server listening on localhost:7777")
-		for {
-			conn, err := listener.Accept()
-			if err != nil {
-				log.Println(err)
-			}
-			broadcaster.Add(conn)
-			go handleClient(conn, messages, broadcaster)
-			m, err := NewMessage("A new client has joined")
-			if err != nil {
-				log.Println(err)
-			}
-			a := &ArborMessage{
-				Type:    NEW_MESSAGE,
-				Message: m,
-			}
-			go handleNewMessage(a, messages, broadcaster)
+		a := &ArborMessage{
+			Type:    NEW_MESSAGE,
+			Message: m,
 		}
+		go handleNewMessage(a, messages, broadcaster)
 	}
 }
 
