@@ -24,13 +24,11 @@ func main() {
 		return
 	}
 	defer ui.Close()
+
+	requests := make(chan string)
 	msgList := NewList(messages.NewStore())
 	msgList.Overflow = "wrap"
-	msgList.Items = []string{
-		"test1",
-		"test2",
-		"test3",
-	}
+	msgList.Items = []string{}
 	msgList.BorderLabel = "Messages"
 	msgList.Width = ui.TermWidth()
 	msgList.Height = ui.TermHeight() - inputHeight
@@ -47,6 +45,10 @@ func main() {
 		msgList.Align()
 		ui.Render(msgList)
 	})
+	ui.Handle("/arbor/request_message", func(e ui.Event) {
+		id := e.Data.(string)
+		requests <- id
+	})
 
 	conn, err := net.Dial("tcp", os.Args[1])
 	if err != nil {
@@ -55,6 +57,7 @@ func main() {
 	}
 
 	go handleConn(conn, msgList)
+	go handleRequests(conn, requests)
 
 	ui.Loop()
 }
@@ -90,6 +93,7 @@ func (m *MessageListView) regenerateItems() {
 		current = m.Store.Get(parentID)
 		if current == nil {
 			//request the message corresponding to parentID
+			ui.SendCustomEvt("/arbor/request_message", parentID)
 			break
 		}
 		parentID = current.Parent
@@ -118,6 +122,27 @@ func handleConn(conn io.ReadWriteCloser, mlv *MessageListView) {
 			ui.SendCustomEvt("/arbor/new_message", a.Message.UUID)
 		default:
 			log.Println("Unknown message type: ", string(data))
+			continue
+		}
+	}
+}
+
+func handleRequests(conn io.ReadWriteCloser, requestedIds chan string) {
+	for id := range requestedIds {
+		a := &messages.ArborMessage{
+			Type: messages.QUERY,
+			Message: &messages.Message{
+				UUID: id,
+			},
+		}
+		data, err := json.Marshal(a)
+		if err != nil {
+			log.Println("Failed to marshal request", err)
+			continue
+		}
+		_, err = conn.Write(data)
+		if err != nil {
+			log.Println("Failed to write request", err)
 			continue
 		}
 	}

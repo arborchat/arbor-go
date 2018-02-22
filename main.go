@@ -49,19 +49,20 @@ func main() {
 func handleClient(conn io.ReadWriteCloser, store *Store, broadcaster *Broadcaster) {
 	data := make([]byte, 1024)
 	for {
-		_, err := conn.Read(data)
+		n, err := conn.Read(data)
 		if err != nil {
 			log.Println(err)
 			return
 		}
 		a := &ArborMessage{}
-		err = json.Unmarshal(data, a)
+		err = json.Unmarshal(data[:n], a)
 		if err != nil {
 			log.Println(err)
 			continue
 		}
 		switch a.Type {
 		case QUERY:
+			log.Println("Handling query for " + a.Message.UUID)
 			go handleQuery(a, conn, store)
 		case NEW_MESSAGE:
 			go handleNewMessage(a, store, broadcaster)
@@ -74,14 +75,21 @@ func handleClient(conn io.ReadWriteCloser, store *Store, broadcaster *Broadcaste
 
 func handleQuery(msg *ArborMessage, conn io.ReadWriteCloser, store *Store) {
 	result := store.Get(msg.Message.UUID)
+	if result == nil {
+		log.Println("Unable to find queried id: " + msg.Message.UUID)
+		return
+	}
 	msg.Message = result
+	msg.Type = NEW_MESSAGE
 	data, err := json.Marshal(msg)
 	if err != nil {
 		log.Println("Error marshalling response", err)
+		return
 	}
 	_, err = conn.Write(data)
 	if err != nil {
 		log.Println("Error sending response", err)
+		return
 	}
 }
 
