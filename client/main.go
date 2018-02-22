@@ -43,7 +43,6 @@ func main() {
 	})
 
 	ui.Handle("/arbor/new_message", func(e ui.Event) {
-		log.Println("Got new message")
 		msgList.UpdateMessage(e.Data.(string))
 		msgList.Align()
 		ui.Render(msgList)
@@ -54,8 +53,6 @@ func main() {
 		log.Println("Unable to connect", err)
 		return
 	}
-	//	io.Copy(os.Stdout, conn)
-	log.Println("Opened connection")
 
 	go handleConn(conn, msgList)
 
@@ -65,15 +62,39 @@ func main() {
 type MessageListView struct {
 	*ui.List
 	*messages.Store
+	LeafID string
 }
 
 func NewList(store *messages.Store) *MessageListView {
-	return &MessageListView{ui.NewList(), store}
+	return &MessageListView{ui.NewList(), store, ""}
 }
 
 func (m *MessageListView) UpdateMessage(id string) {
 	msg := m.Store.Get(id)
-	m.List.Items = append(m.List.Items, msg.Content)
+	if msg.Parent == m.LeafID || m.LeafID == "" {
+		m.LeafID = msg.UUID
+	}
+	m.regenerateItems()
+}
+
+func (m *MessageListView) regenerateItems() {
+	const length = 10
+	items := make([]string, length)
+	current := m.Store.Get(m.LeafID)
+	parentID := current.Parent
+	for i := length - 1; i >= 0; i-- {
+		if parentID == "" {
+			break
+		}
+		items[i] = current.Content
+		current = m.Store.Get(parentID)
+		if current == nil {
+			//request the message corresponding to parentID
+			break
+		}
+		parentID = current.Parent
+	}
+	m.List.Items = items
 }
 
 func handleConn(conn io.ReadWriteCloser, mlv *MessageListView) {

@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"time"
 
 	. "github.com/whereswaldon/arbor/messages"
 )
@@ -18,6 +19,23 @@ func main() {
 		log.Fatal(err)
 	}
 	log.Println("Server listening on localhost:7777")
+	go func() {
+		m, err := NewMessage("Root message")
+		if err != nil {
+			log.Println(err)
+		}
+		for t := range time.NewTicker(time.Second).C {
+			m, err = m.Reply("It is now " + t.String())
+			if err != nil {
+				log.Println(err)
+			}
+			a := &ArborMessage{
+				Type:    NEW_MESSAGE,
+				Message: m,
+			}
+			go handleNewMessage(a, messages, broadcaster)
+		}
+	}()
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
@@ -25,15 +43,6 @@ func main() {
 		}
 		broadcaster.Add(conn)
 		go handleClient(conn, messages, broadcaster)
-		m, err := NewMessage("A new client has joined")
-		if err != nil {
-			log.Println(err)
-		}
-		a := &ArborMessage{
-			Type:    NEW_MESSAGE,
-			Message: m,
-		}
-		go handleNewMessage(a, messages, broadcaster)
 	}
 }
 
