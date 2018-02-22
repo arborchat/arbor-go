@@ -30,7 +30,7 @@ func main() {
 		}
 		io.Copy(os.Stdout, conn)
 	} else {
-		//messages := NewStore()
+		messages := NewStore()
 		broadcaster := NewBroadcaster()
 		//serve
 		listener, err := net.Listen("tcp", ":7777")
@@ -43,6 +43,7 @@ func main() {
 				log.Println(err)
 			}
 			broadcaster.Add(conn)
+			go handleClient(conn, messages, broadcaster)
 			m, err := NewMessage("A new client has joined")
 			if err != nil {
 				log.Println(err)
@@ -51,11 +52,45 @@ func main() {
 				Type:    NEW_MESSAGE,
 				Message: m,
 			}
-			j, err := json.Marshal(a)
-			if err != nil {
-				log.Println(err)
-			}
-			broadcaster.Send(j)
+			go handleNewMessage(a, messages, broadcaster)
 		}
 	}
+}
+
+func handleClient(conn io.ReadWriteCloser, store *Store, broadcaster *Broadcaster) {
+	data := make([]byte, 1024)
+	for {
+		_, err := conn.Read(data)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		a := &ArborMessage{}
+		err = json.Unmarshal(data, a)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		switch a.Type {
+		case QUERY:
+			go handleQuery(a, conn, store)
+		case NEW_MESSAGE:
+			go handleNewMessage(a, store, broadcaster)
+		default:
+			log.Println("Unrecognized message type", a.Type)
+			continue
+		}
+	}
+}
+
+func handleQuery(msg *ArborMessage, conn io.ReadWriteCloser, store *Store) {
+}
+
+func handleNewMessage(msg *ArborMessage, store *Store, broadcaster *Broadcaster) {
+	store.Add(msg.Message)
+	j, err := json.Marshal(msg)
+	if err != nil {
+		log.Println(err)
+	}
+	broadcaster.Send(j)
 }
