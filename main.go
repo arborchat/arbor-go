@@ -24,6 +24,8 @@ func main() {
 		if err != nil {
 			log.Println(err)
 		}
+		log.Println("Root message UUID is " + m.UUID)
+		messages.Add(m)
 		for t := range time.NewTicker(time.Second).C {
 			m, err = m.Reply("It is now " + t.String())
 			if err != nil {
@@ -91,6 +93,7 @@ func handleQuery(msg *ArborMessage, conn io.ReadWriteCloser, store *Store) {
 		log.Println("Error sending response", err)
 		return
 	}
+	log.Println("Query response: ", string(data))
 }
 
 func handleNewMessage(msg *ArborMessage, store *Store, broadcaster *Broadcaster) {
