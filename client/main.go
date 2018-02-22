@@ -1,100 +1,103 @@
 package main
 
 import (
-	"fmt"
-	ui "github.com/gizak/termui"
+	"encoding/json"
 	"io"
+	"log"
 	"net"
 	"os"
+
+	ui "github.com/gizak/termui"
+	messages "github.com/whereswaldon/arbor/messages"
 )
+
+const inputHeight = 5
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Println("Usage: " + os.Args[0] + " <host:port>")
+		log.Println("Usage: " + os.Args[0] + " <host:port>")
 		return
 	}
-	conn, err := net.Dial("tcp", os.Args[1])
+	err := ui.Init()
 	if err != nil {
-		fmt.Println("Unable to connect", err)
-		return
-	}
-	//	io.Copy(os.Stdout, conn)
-	go handleConn(conn)
-
-	err = ui.Init()
-	if err != nil {
-		fmt.Println("Unable to launch ui", err)
+		log.Println("Unable to launch ui", err)
 		return
 	}
 	defer ui.Close()
-	parent := ui.NewPar("This is a parent message")
-	parent.Height = 3
+	msgList := NewList(messages.NewStore())
+	msgList.Overflow = "wrap"
+	msgList.Items = []string{
+		"test1",
+		"test2",
+		"test3",
+	}
+	msgList.BorderLabel = "Messages"
+	msgList.Width = ui.TermWidth()
+	msgList.Height = ui.TermHeight() - inputHeight
+	msgList.Align()
 
-	current := ui.NewPar("This is this current message")
-	current.Height = 4
-
-	sibling := ui.NewPar("This is a sibling message")
-	sibling.Height = 4
-
-	child1 := ui.NewPar("This is a child message")
-	child1.Height = 5
-
-	child2 := ui.NewPar("This is another child message")
-	child2.Height = 5
-
-	input := ui.NewPar("This is an input")
-	input.Height = 3
-
-	vline := ui.NewPar("|")
-	vline.Border = false
-	vline.Height = 1
-
-	vline2 := ui.NewPar("|")
-	vline2.Border = false
-	vline2.Height = 1
-
-	vline3 := ui.NewPar("|")
-	vline3.Border = false
-	vline3.Height = 1
-
-	vline4 := ui.NewPar("|")
-	vline4.Border = false
-	vline4.Height = 1
-
-	ui.Body.AddRows(
-		ui.NewRow(
-			ui.NewCol(12, 0, parent),
-		),
-		ui.NewRow(
-			ui.NewCol(6, 0, vline),
-			ui.NewCol(5, 1, vline2),
-		),
-		ui.NewRow(
-			ui.NewCol(6, 0, current),
-			ui.NewCol(5, 1, sibling),
-		),
-		ui.NewRow(
-			ui.NewCol(4, 0, vline3),
-			ui.NewCol(4, 0, vline4),
-		),
-		ui.NewRow(
-			ui.NewCol(4, 0, child1),
-			ui.NewCol(4, 0, child2),
-		),
-		ui.NewRow(
-			ui.NewCol(12, 0, input),
-		),
-	)
-
-	ui.Body.Align()
-	ui.Render(ui.Body)
+	ui.Render(msgList)
 
 	ui.Handle("/sys/kbd/q", func(ui.Event) {
 		ui.StopLoop()
 	})
+
+	ui.Handle("/arbor/new_message", func(e ui.Event) {
+		log.Println("Got new message")
+		msgList.UpdateMessage(e.Data.(string))
+		msgList.Align()
+		ui.Render(msgList)
+	})
+
+	conn, err := net.Dial("tcp", os.Args[1])
+	if err != nil {
+		log.Println("Unable to connect", err)
+		return
+	}
+	//	io.Copy(os.Stdout, conn)
+	log.Println("Opened connection")
+
+	go handleConn(conn, msgList)
+
 	ui.Loop()
 }
 
-func handleConn(conn io.ReadWriteCloser) {
+type MessageListView struct {
+	*ui.List
+	*messages.Store
+}
 
+func NewList(store *messages.Store) *MessageListView {
+	return &MessageListView{ui.NewList(), store}
+}
+
+func (m *MessageListView) UpdateMessage(id string) {
+	msg := m.Store.Get(id)
+	m.List.Items = append(m.List.Items, msg.Content)
+}
+
+func handleConn(conn io.ReadWriteCloser, mlv *MessageListView) {
+	data := make([]byte, 1024)
+	for {
+		n, err := conn.Read(data)
+		if err != nil {
+			log.Println("unable to read message: ", err)
+			return
+		}
+		a := &messages.ArborMessage{}
+		err = json.Unmarshal(data[:n], a)
+		if err != nil {
+			log.Println("unable to decode message: ", err, string(data))
+			continue
+		}
+		switch a.Type {
+		case messages.NEW_MESSAGE:
+			// add the new message
+			mlv.Add(a.Message)
+			ui.SendCustomEvt("/arbor/new_message", a.Message.UUID)
+		default:
+			log.Println("Unknown message type: ", string(data))
+			continue
+		}
+	}
 }
