@@ -37,6 +37,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
+		log.Println("Server listening on localhost:7777")
 		for {
 			conn, err := listener.Accept()
 			if err != nil {
@@ -84,6 +85,16 @@ func handleClient(conn io.ReadWriteCloser, store *Store, broadcaster *Broadcaste
 }
 
 func handleQuery(msg *ArborMessage, conn io.ReadWriteCloser, store *Store) {
+	result := store.Get(msg.Message.UUID)
+	msg.Message = result
+	data, err := json.Marshal(msg)
+	if err != nil {
+		log.Println("Error marshalling response", err)
+	}
+	_, err = conn.Write(data)
+	if err != nil {
+		log.Println("Error sending response", err)
+	}
 }
 
 func handleNewMessage(msg *ArborMessage, store *Store, broadcaster *Broadcaster) {

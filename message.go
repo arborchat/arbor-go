@@ -6,8 +6,8 @@ import (
 )
 
 type Message struct {
-	*uuid.UUID
-	parent  *uuid.UUID
+	UUID    string
+	Parent  string
 	Content string
 }
 
@@ -17,8 +17,8 @@ func NewMessage(content string) (*Message, error) {
 		return nil, errors.Wrapf(err, "Unable to generate UUID")
 	}
 	return &Message{
-		UUID:    id,
-		parent:  nil,
+		UUID:    id.String(),
+		Parent:  "",
 		Content: content,
 	}, nil
 
@@ -29,6 +29,6 @@ func (m *Message) Reply(content string) (*Message, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "Unable to reply")
 	}
-	reply.parent = m.UUID
+	reply.Parent = m.UUID
 	return reply, nil
 }

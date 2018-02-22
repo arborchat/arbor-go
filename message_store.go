@@ -24,6 +24,6 @@ func (s *Store) Get(uuid string) *Message {
 
 func (s *Store) Add(msg *Message) {
 	s.Lock()
-	s.m[msg.UUID.String()] = msg
+	s.m[msg.UUID] = msg
 	s.Unlock()
 }
