@@ -16,6 +16,20 @@ func quit(g *gocui.Gui, v *gocui.View) error {
 	return gocui.ErrQuit
 }
 
+var currentView int = 0
+
+func up(g *gocui.Gui, v *gocui.View) error {
+	currentView++
+	_, err := g.SetCurrentView(fmt.Sprintf("%d", currentView))
+	return err
+}
+
+func down(g *gocui.Gui, v *gocui.View) error {
+	currentView--
+	_, err := g.SetCurrentView(fmt.Sprintf("%d", currentView))
+	return err
+}
+
 func main() {
 	if len(os.Args) < 2 {
 		log.Println("Usage: " + os.Args[0] + " <host:port>")
@@ -34,7 +48,6 @@ func main() {
 	ui.Cursor = true
 	ui.SelFgColor = gocui.ColorGreen
 	ui.SetManager(layoutManager)
-	ui.SetCurrentView("message-history")
 
 	conn, err := net.Dial("tcp", os.Args[1])
 	if err != nil {
@@ -45,6 +58,14 @@ func main() {
 	go handleRequests(conn, queries)
 
 	if err := ui.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, quit); err != nil {
+		log.Panicln(err)
+	}
+
+	if err := ui.SetKeybinding("", gocui.KeyArrowUp, gocui.ModNone, up); err != nil {
+		log.Panicln(err)
+	}
+
+	if err := ui.SetKeybinding("", gocui.KeyArrowDown, gocui.ModNone, down); err != nil {
 		log.Panicln(err)
 	}
 
@@ -79,7 +100,7 @@ func (m *MessageListView) getItems() []string {
 		return items
 	}
 	parentID := current.Parent
-	for i := length - 1; i >= 0; i-- {
+	for i := range items {
 		if parentID == "" {
 			break
 		}
@@ -97,23 +118,13 @@ func (m *MessageListView) getItems() []string {
 
 func (m *MessageListView) Layout(ui *gocui.Gui) error {
 	maxX, maxY := ui.Size()
-	if v, err := ui.SetView("message-history", 0, 0, maxX-1, maxY-5); err != nil {
-		if err != gocui.ErrUnknownView {
-			log.Println(err)
-			return err
-		}
-		v.Title = "History"
-		v.Wrap = true
-		v.Autoscroll = true
-	}
-	history, _ := ui.View("message-history")
-	history.Clear()
-	items := m.getItems()
-	for _, item := range items {
-		fmt.Fprintln(history, item)
-	}
-	log.Println("rendered history")
-	if v, err := ui.SetView("message-input", 0, maxY-4, maxX-1, maxY-1); err != nil {
+
+	// determine input box coordinates
+	inputUX := 0
+	inputUY := maxY - 4
+	inputW := maxX - 1
+	inputH := 3
+	if v, err := ui.SetView("message-input", inputUX, inputUY, inputUX+inputW, inputUY+inputH); err != nil {
 		if err != gocui.ErrUnknownView {
 			log.Println(err)
 			return err
@@ -122,7 +133,26 @@ func (m *MessageListView) Layout(ui *gocui.Gui) error {
 		v.Editable = true
 		v.Wrap = true
 	}
-	log.Println("rendered copose")
+	items := m.getItems()
+	currentY := inputUY - 1
+	height := 2
+	for i, item := range items {
+		if currentY < 4 {
+			break
+		}
+		log.Printf("using view coordinates (%d,%d) to (%d,%d)\n",
+			0, currentY-height, maxX-1, currentY)
+		log.Printf("creating view: %d", i)
+		view, err := ui.SetView(fmt.Sprintf("%d", i), 0, currentY-height, maxX-1, currentY)
+		if err != nil {
+			if err != gocui.ErrUnknownView {
+				log.Panicln("unable to create view for message: ", err)
+			}
+		}
+		view.Clear()
+		fmt.Fprint(view, item)
+		currentY -= height + 1
+	}
 	return nil
 }
 
