@@ -72,7 +72,7 @@ func (m *MessageListView) UpdateMessage(id string) {
 }
 
 func (m *MessageListView) getItems() []string {
-	const length = 10
+	const length = 100
 	items := make([]string, length)
 	current := m.Store.Get(m.LeafID)
 	if current == nil {
@@ -107,6 +107,7 @@ func (m *MessageListView) Layout(ui *gocui.Gui) error {
 		v.Autoscroll = true
 	}
 	history, _ := ui.View("message-history")
+	history.Clear()
 	items := m.getItems()
 	for _, item := range items {
 		fmt.Fprintln(history, item)
