@@ -40,7 +40,7 @@ func main() {
 	}
 	defer ui.Close()
 
-	layoutManager, queries := NewList(messages.NewStore())
+	layoutManager, queries := NewList(NewTree(messages.NewStore()))
 	ui.Highlight = true
 	ui.Cursor = true
 	ui.SelFgColor = gocui.ColorGreen

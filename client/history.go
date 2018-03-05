@@ -9,17 +9,17 @@ import (
 )
 
 type MessageListView struct {
-	*messages.Store
+	*Tree
 	LeafID string
 	Query  chan<- string
 }
 
-// NewList creates a new MessageListView that uses the provided Store
+// NewList creates a new MessageListView that uses the provided Tree
 // to manage message history. This MessageListView acts as a layout manager
 // for the gocui layout package. The method returns both a MessageListView
 // and a readonly channel of queries. These queries are message UUIDs that
 // the local store has requested the message contents for.
-func NewList(store *messages.Store) (*MessageListView, <-chan string) {
+func NewList(store *Tree) (*MessageListView, <-chan string) {
 	queryChan := make(chan string)
 	return &MessageListView{store, "", queryChan}, queryChan
 }
@@ -28,37 +28,46 @@ func NewList(store *messages.Store) (*MessageListView, <-chan string) {
 // message within the view of the conversation *if* it is a child of
 // the previous current "leaf" message.
 func (m *MessageListView) UpdateMessage(id string) {
-	msg := m.Store.Get(id)
+	msg := m.Tree.Get(id)
 	if msg.Parent == m.LeafID || m.LeafID == "" {
 		m.LeafID = msg.UUID
 	}
 	m.getItems()
 }
 
-// getItems returns a slice of message contents starting from the current
+// getItems returns a slice of messages starting from the current
 // leaf message and working backward along its ancestry.
-func (m *MessageListView) getItems() []string {
+func (m *MessageListView) getItems() []*messages.Message {
 	const length = 100
-	items := make([]string, length)
-	current := m.Store.Get(m.LeafID)
+	items := make([]*messages.Message, length)
+	current := m.Tree.Get(m.LeafID)
 	if current == nil {
-		return items
+		return items[:0]
 	}
-	parentID := current.Parent
+	count := 1
+	parent := ""
 	for i := range items {
-		items[i] = current.Content
-		if parentID == "" {
+		items[i] = current
+		if current.Parent == "" {
 			break
 		}
-		current = m.Store.Get(parentID)
+		parent = current.Parent
+		current = m.Tree.Get(current.Parent)
 		if current == nil {
 			//request the message corresponding to parentID
-			m.Query <- parentID
+			m.Query <- parent
 			break
 		}
-		parentID = current.Parent
+		count++
 	}
-	return items
+	return items[:min(count, len(items))]
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 // Layout builds a message history in the provided UI
@@ -96,7 +105,7 @@ func (m *MessageListView) Layout(ui *gocui.Gui) error {
 			}
 		}
 		view.Clear()
-		fmt.Fprint(view, item)
+		fmt.Fprint(view, item.Content)
 		currentY -= height + 1
 	}
 	return nil
