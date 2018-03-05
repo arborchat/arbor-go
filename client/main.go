@@ -6,7 +6,8 @@ import (
 	"os"
 
 	"github.com/jroimartin/gocui"
-	messages "github.com/whereswaldon/arbor/messages"
+	"github.com/whereswaldon/arbor/client/clientio"
+	"github.com/whereswaldon/arbor/messages"
 )
 
 func quit(g *gocui.Gui, v *gocui.View) error {
@@ -36,8 +37,8 @@ func main() {
 		log.Println("Unable to connect", err)
 		return
 	}
-	go HandleConn(conn, layoutManager, ui)
-	go HandleRequests(conn, queries)
+	go clientio.HandleConn(conn, layoutManager, ui)
+	go clientio.HandleRequests(conn, queries)
 
 	if err := ui.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, quit); err != nil {
 		log.Panicln(err)

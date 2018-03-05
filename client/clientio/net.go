@@ -1,4 +1,4 @@
-package main
+package clientio
 
 import (
 	"encoding/json"
@@ -9,10 +9,15 @@ import (
 	messages "github.com/whereswaldon/arbor/messages"
 )
 
+type MessageView interface {
+	Add(*messages.Message)
+	UpdateMessage(string)
+}
+
 // HandleConn reads from the provided connection and dispatches events to the
 // provided MessageListView and Gui as needed to handle new messages coming
 // from the server.
-func HandleConn(conn io.ReadWriteCloser, mlv *MessageListView, ui *gocui.Gui) {
+func HandleConn(conn io.ReadWriteCloser, mlv MessageView, ui *gocui.Gui) {
 	data := make([]byte, 1024)
 	for {
 		n, err := conn.Read(data)
