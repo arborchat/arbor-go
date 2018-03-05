@@ -173,15 +173,22 @@ func (m *MessageListView) Up(g *gocui.Gui, v *gocui.View) error {
 	}
 	msg := m.Get(m.CursorID)
 	if msg == nil {
-		return fmt.Errorf("Error fetching cursor message: %s", m.CursorID)
+		m.CursorID = m.LeafID
+		log.Println("Error fetching cursor message: %s", m.CursorID)
+		return nil
 	} else if msg.Parent == "" {
-		log.Println("Cannot move cursor up, nil parent for message: ", msg)
+		m.CursorID = m.LeafID
+		log.Println("Cannot move cursor up, nil parent for message: %v", msg)
+		return nil
 	} else if _, ok := m.ViewIDs[msg.Parent]; !ok {
+		m.CursorID = m.LeafID
 		log.Println("Cannot select parent message, not on screen")
+		return nil
+	} else {
+		m.CursorID = msg.Parent
+		_, err := g.SetCurrentView(msg.Parent)
+		return err
 	}
-	m.CursorID = msg.Parent
-	_, err := g.SetCurrentView(msg.Parent)
-	return err
 }
 
 func (m *MessageListView) Down(g *gocui.Gui, v *gocui.View) error {
