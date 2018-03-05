@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net"
 	"os"
@@ -12,20 +11,6 @@ import (
 
 func quit(g *gocui.Gui, v *gocui.View) error {
 	return gocui.ErrQuit
-}
-
-var currentView int = 0
-
-func up(g *gocui.Gui, v *gocui.View) error {
-	currentView++
-	_, err := g.SetCurrentView(fmt.Sprintf("%d", currentView))
-	return err
-}
-
-func down(g *gocui.Gui, v *gocui.View) error {
-	currentView--
-	_, err := g.SetCurrentView(fmt.Sprintf("%d", currentView))
-	return err
 }
 
 func main() {
@@ -58,11 +43,11 @@ func main() {
 		log.Panicln(err)
 	}
 
-	if err := ui.SetKeybinding("", gocui.KeyArrowUp, gocui.ModNone, up); err != nil {
+	if err := ui.SetKeybinding("", gocui.KeyArrowUp, gocui.ModNone, layoutManager.Up); err != nil {
 		log.Panicln(err)
 	}
 
-	if err := ui.SetKeybinding("", gocui.KeyArrowDown, gocui.ModNone, down); err != nil {
+	if err := ui.SetKeybinding("", gocui.KeyArrowDown, gocui.ModNone, layoutManager.Down); err != nil {
 		log.Panicln(err)
 	}
 
