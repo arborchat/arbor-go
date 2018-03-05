@@ -21,3 +21,5 @@ Things to do:
 - Implement replies (easy once the other stuff is done).
 - Implement a more robust protocol with version numbers, length indicators
   (for fast processing), usernames, and timestamps.
+- Investigate arbor server clustering by having a new server connect as a client to an old one.
+- Fix JSON parser so that all stacked messages are processed.
