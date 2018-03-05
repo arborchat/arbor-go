@@ -186,16 +186,45 @@ func (m *MessageListView) Up(g *gocui.Gui, v *gocui.View) error {
 		return nil
 	} else {
 		m.CursorID = msg.Parent
-		_, err := g.SetCurrentView(msg.Parent)
+		_, err := g.SetCurrentView(m.CursorID)
 		return err
 	}
 }
 
 func (m *MessageListView) Down(g *gocui.Gui, v *gocui.View) error {
+	m.ThreadView.Lock()
+	defer m.ThreadView.Unlock()
 	if m.CursorID == "" {
 		m.CursorID = m.LeafID
 	}
-	//	_, err := g.SetCurrentView(fmt.Sprintf("%d", currentView))
-	//	return err
-	return nil
+	msg := m.Get(m.CursorID)
+	if msg == nil {
+		m.CursorID = m.LeafID
+		log.Println("Error fetching cursor message: %s", m.CursorID)
+		return nil
+	}
+	// get the children of the cursor message
+	children := m.Children(m.CursorID)
+	if len(children) == 0 {
+		log.Println("Cannot move cursor down, no children for message: %v", msg)
+		return nil
+	}
+	// find the child that is visible
+	onscreen := ""
+	for _, child := range children {
+		if _, ok := m.ViewIDs[child]; ok {
+			onscreen = child
+		}
+	}
+
+	// if no children are visible
+	if onscreen == "" {
+		m.CursorID = m.LeafID
+		log.Println("Cannot select child message, none on screen")
+		return nil
+	} else { // select the visible child
+		m.CursorID = onscreen
+		_, err := g.SetCurrentView(m.CursorID)
+		return err
+	}
 }
