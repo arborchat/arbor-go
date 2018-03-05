@@ -11,13 +11,22 @@ import (
 type MessageListView struct {
 	*messages.Store
 	LeafID string
-	Query  chan string
+	Query  chan<- string
 }
 
-func NewList(store *messages.Store, queryChan chan string) *MessageListView {
-	return &MessageListView{store, "", queryChan}
+// NewList creates a new MessageListView that uses the provided Store
+// to manage message history. This MessageListView acts as a layout manager
+// for the gocui layout package. The method returns both a MessageListView
+// and a readonly channel of queries. These queries are message UUIDs that
+// the local store has requested the message contents for.
+func NewList(store *messages.Store) (*MessageListView, <-chan string) {
+	queryChan := make(chan string)
+	return &MessageListView{store, "", queryChan}, queryChan
 }
 
+// UpdateMessage sets the provided UUID as the ID of the current "leaf"
+// message within the view of the conversation *if* it is a child of
+// the previous current "leaf" message.
 func (m *MessageListView) UpdateMessage(id string) {
 	msg := m.Store.Get(id)
 	if msg.Parent == m.LeafID || m.LeafID == "" {
@@ -26,6 +35,8 @@ func (m *MessageListView) UpdateMessage(id string) {
 	m.getItems()
 }
 
+// getItems returns a slice of message contents starting from the current
+// leaf message and working backward along its ancestry.
 func (m *MessageListView) getItems() []string {
 	const length = 100
 	items := make([]string, length)
@@ -50,6 +61,7 @@ func (m *MessageListView) getItems() []string {
 	return items
 }
 
+// Layout builds a message history in the provided UI
 func (m *MessageListView) Layout(ui *gocui.Gui) error {
 	maxX, maxY := ui.Size()
 

@@ -9,12 +9,19 @@ import (
 	messages "github.com/whereswaldon/arbor/messages"
 )
 
+// HandleConn reads from the provided connection and dispatches events to the
+// provided MessageListView and Gui as needed to handle new messages coming
+// from the server.
 func HandleConn(conn io.ReadWriteCloser, mlv *MessageListView, ui *gocui.Gui) {
 	data := make([]byte, 1024)
 	for {
 		n, err := conn.Read(data)
 		log.Println("read ", n, " bytes")
 		if err != nil {
+			if err == io.EOF {
+				log.Println("Connection to server closed, reader shutting down", err)
+				break
+			}
 			log.Println("unable to read message: ", err)
 			return
 		}
@@ -37,7 +44,10 @@ func HandleConn(conn io.ReadWriteCloser, mlv *MessageListView, ui *gocui.Gui) {
 	}
 }
 
-func HandleRequests(conn io.ReadWriteCloser, requestedIds chan string) {
+// HandleRequests reads from the requestedIds channel and asks the server to
+// send the message details for the messages corresponding to each UUID that
+// it receives over the channel.
+func HandleRequests(conn io.ReadWriteCloser, requestedIds <-chan string) {
 	for id := range requestedIds {
 		a := &messages.ArborMessage{
 			Type: messages.QUERY,
@@ -52,6 +62,10 @@ func HandleRequests(conn io.ReadWriteCloser, requestedIds chan string) {
 		}
 		_, err = conn.Write(data)
 		if err != nil {
+			if err == io.EOF {
+				log.Println("Connection to server closed, writer shutting down", err)
+				break
+			}
 			log.Println("Failed to write request", err)
 			continue
 		}

@@ -40,8 +40,7 @@ func main() {
 	}
 	defer ui.Close()
 
-	queries := make(chan string)
-	layoutManager := NewList(messages.NewStore(), queries)
+	layoutManager, queries := NewList(messages.NewStore())
 	ui.Highlight = true
 	ui.Cursor = true
 	ui.SelFgColor = gocui.ColorGreen
