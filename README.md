@@ -12,8 +12,7 @@ the default client.
 Things to do:
 - Make the client aware of the relationship between the view that holds
   a message and the message itself. This will allow for replying easily.
-- Build a better client-side data structure for modeling the conversation
-  tree that would support fast lookup times for siblings.
+- ~~Build a better client-side data structure for modeling the conversation tree that would support fast lookup times for siblings.~~
 - Implement a test client that creates random subtrees as the server runs.
 - Implement a graphical indicator for when a message has siblings.
 - Implement subtree switching and find a good heuristic for choosing the
