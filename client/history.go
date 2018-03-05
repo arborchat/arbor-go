@@ -105,8 +105,8 @@ func (m *MessageListView) Layout(ui *gocui.Gui) error {
 			}
 		}
 		view.Clear()
-		children := m.Children(item.UUID)
-		fmt.Fprintf(view, "%d children", len(children))
+		siblings := m.Children(item.Parent)
+		fmt.Fprintf(view, "%d siblings| ", len(siblings)-1)
 		fmt.Fprint(view, item.Content)
 		currentY -= height + 1
 	}
