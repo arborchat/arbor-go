@@ -3,17 +3,23 @@ package main
 import (
 	"fmt"
 	"log"
+	"sync"
 
 	"github.com/jroimartin/gocui"
 	messages "github.com/whereswaldon/arbor/messages"
 )
 
-type MessageListView struct {
-	*Tree
+type ThreadView struct {
 	CursorID string
 	ViewIDs  map[string]struct{}
 	LeafID   string
-	Query    chan<- string
+	sync.RWMutex
+}
+
+type MessageListView struct {
+	*Tree
+	ThreadView
+	Query chan<- string
 }
 
 // NewList creates a new MessageListView that uses the provided Tree
@@ -24,11 +30,13 @@ type MessageListView struct {
 func NewList(store *Tree) (*MessageListView, <-chan string) {
 	queryChan := make(chan string)
 	return &MessageListView{
-		Tree:     store,
-		LeafID:   "",
-		CursorID: "",
-		ViewIDs:  make(map[string]struct{}),
-		Query:    queryChan,
+		Tree: store,
+		ThreadView: ThreadView{
+			LeafID:   "",
+			CursorID: "",
+			ViewIDs:  make(map[string]struct{}),
+		},
+		Query: queryChan,
 	}, queryChan
 }
 
@@ -39,10 +47,14 @@ func NewList(store *Tree) (*MessageListView, <-chan string) {
 func (m *MessageListView) UpdateMessage(id string) {
 	msg := m.Tree.Get(id)
 	if msg.Parent == m.LeafID || m.LeafID == "" {
+		m.ThreadView.Lock()
 		m.LeafID = msg.UUID
+		m.ThreadView.Unlock()
 	}
 	if m.CursorID == "" {
+		m.ThreadView.Lock()
 		m.CursorID = msg.UUID
+		m.ThreadView.Unlock()
 	}
 	m.getItems()
 }
@@ -52,7 +64,9 @@ func (m *MessageListView) UpdateMessage(id string) {
 func (m *MessageListView) getItems() []*messages.Message {
 	const length = 100
 	items := make([]*messages.Message, length)
+	m.ThreadView.RLock()
 	current := m.Tree.Get(m.LeafID)
+	m.ThreadView.RUnlock()
 	if current == nil {
 		return items[:0]
 	}
@@ -84,12 +98,14 @@ func min(a, b int) int {
 
 // Layout builds a message history in the provided UI
 func (m *MessageListView) Layout(ui *gocui.Gui) error {
+	m.ThreadView.Lock()
 	// destroy old views
 	for id := range m.ViewIDs {
 		ui.DeleteView(id)
 	}
 	// reset ids
 	m.ViewIDs = make(map[string]struct{})
+	m.ThreadView.Unlock()
 
 	maxX, maxY := ui.Size()
 
@@ -110,6 +126,8 @@ func (m *MessageListView) Layout(ui *gocui.Gui) error {
 	items := m.getItems()
 	currentY := inputUY - 1
 	height := 2
+	m.ThreadView.Lock()
+	defer m.ThreadView.Unlock()
 	for _, item := range items {
 		if currentY < 4 {
 			break
@@ -130,10 +148,26 @@ func (m *MessageListView) Layout(ui *gocui.Gui) error {
 		fmt.Fprint(view, item.Content)
 		currentY -= height + 1
 	}
+	if _, ok := m.ViewIDs[m.CursorID]; ok {
+		// view with cursor still on screen
+		_, err := ui.SetCurrentView(m.CursorID)
+		if err != nil {
+			return err
+		}
+	} else if m.LeafID != "" {
+		// view with cursor off screen
+		m.CursorID = m.LeafID
+		_, err := ui.SetCurrentView(m.LeafID)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
 func (m *MessageListView) Up(g *gocui.Gui, v *gocui.View) error {
+	m.ThreadView.Lock()
+	defer m.ThreadView.Unlock()
 	if m.CursorID == "" {
 		m.CursorID = m.LeafID
 	}
