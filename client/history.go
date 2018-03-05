@@ -46,10 +46,10 @@ func (m *MessageListView) getItems() []string {
 	}
 	parentID := current.Parent
 	for i := range items {
+		items[i] = current.Content
 		if parentID == "" {
 			break
 		}
-		items[i] = current.Content
 		current = m.Store.Get(parentID)
 		if current == nil {
 			//request the message corresponding to parentID
