@@ -42,11 +42,11 @@ func NewList(store *Tree) (*History, <-chan string) {
 	}, queryChan
 }
 
-// UpdateMessage sets the provided UUID as the ID of the current "leaf"
+// UpdateLeaf sets the provided UUID as the ID of the current "leaf"
 // message within the view of the conversation *if* it is a child of
 // the previous current "leaf" message. If there is no cursor, the new
 // leaf will be set as the cursor.
-func (m *History) UpdateMessage(id string) {
+func (m *History) UpdateLeaf(id string) {
 	msg := m.Tree.Get(id)
 	if msg.Parent == m.LeafID || m.LeafID == "" {
 		m.ThreadView.Lock()

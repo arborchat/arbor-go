@@ -42,7 +42,7 @@ func main() {
 	go func() {
 		for newMsg := range msgs {
 			layoutManager.Add(newMsg)
-			layoutManager.UpdateMessage(newMsg.UUID)
+			layoutManager.UpdateLeaf(newMsg.UUID)
 			//redraw
 			ui.Update(func(*gocui.Gui) error { return nil })
 		}
