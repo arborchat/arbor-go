@@ -100,7 +100,7 @@ func (m *History) Layout(ui *gocui.Gui) error {
 	//TODO: draw input box iff we are replying to a message
 
 	// get the latest history
-	_ = m.refreshThread()
+	thread := m.refreshThread()
 	totalY := maxY // how much vertical space is left for drawing messages
 
 	cursorY := (totalY - 2) / 2
@@ -109,25 +109,72 @@ func (m *History) Layout(ui *gocui.Gui) error {
 	if cursorId == "" {
 		return nil
 	}
-	err, _ := m.drawCursorView(cursorX, cursorY, maxX-1, cursorId, ui)
+	err, cursorHeight := m.drawView(cursorX, cursorY, maxX-1, down, true, cursorId, ui) //draw the cursor message
 	if err != nil {
 		log.Println("error drawing cursor view: ", err)
 		return err
 	}
+
+	var currentIdxBelow int = -1
+	var currentIdxAbove int = -1
+	for i, message := range thread {
+		if message.UUID == cursorId {
+			currentIdxBelow = i
+			currentIdxAbove = i
+			break
+		}
+	}
+
+	lowerBound := cursorY + cursorHeight
+	for currentIdxBelow--; currentIdxBelow > 0 && lowerBound < maxY; currentIdxBelow-- {
+		err, msgHeight := m.drawView(0, lowerBound, maxX-1, down, false, thread[currentIdxBelow].UUID, ui) //draw the cursor message
+		if err != nil {
+			log.Println("error drawing view: ", err)
+			return err
+		}
+		lowerBound += msgHeight
+	}
+	upperBound := cursorY - 1
+	for currentIdxAbove++; currentIdxAbove < len(thread) && upperBound >= 0; currentIdxAbove++ {
+		err, msgHeight := m.drawView(0, upperBound, maxX-1, up, false, thread[currentIdxAbove].UUID, ui) //draw the cursor message
+		if err != nil {
+			log.Println("error drawing view: ", err)
+			return err
+		}
+		upperBound -= msgHeight
+	}
 	return nil
 }
 
-func (h *History) drawCursorView(x, y, w int, id string, ui *gocui.Gui) (error, int) {
+type Direction int
+
+const up Direction = 0
+const down Direction = 1
+
+func (h *History) drawView(x, y, w int, dir Direction, isCursor bool, id string, ui *gocui.Gui) (error, int) {
 	const borderHeight = 2
 	msg := h.Tree.Get(id)
 	if msg == nil {
-		log.Println("Cursor accessed nil message with id:", id)
+		log.Println("accessed nil message with id:", id)
 	}
 	contents := wrap.WrapString(msg.Content, uint(w))
 	height := strings.Count(contents, "\n") + borderHeight
-	log.Printf("Cursor message at (%d,%d) -> (%d,%d)\n", x, y, x+w, y+height)
 
-	if v, err := ui.SetView(id, x, y, x+w, y+height); err != nil {
+	var upperLeftX, upperLeftY, lowerRightX, lowerRightY int
+	if dir == up {
+		upperLeftX = x
+		upperLeftY = y - height
+		lowerRightX = x + w
+		lowerRightY = y
+	} else if dir == down {
+		upperLeftX = x
+		upperLeftY = y
+		lowerRightX = x + w
+		lowerRightY = y + height
+	}
+	log.Printf("message at (%d,%d) -> (%d,%d)\n", upperLeftX, upperLeftY, lowerRightX, lowerRightY)
+
+	if v, err := ui.SetView(id, upperLeftX, upperLeftY, lowerRightX, lowerRightY); err != nil {
 		if err != gocui.ErrUnknownView {
 			log.Println(err)
 			return err, 0
@@ -135,9 +182,11 @@ func (h *History) drawCursorView(x, y, w int, id string, ui *gocui.Gui) (error, 
 		v.Title = id
 		v.Wrap = true
 		fmt.Fprint(v, contents)
-		ui.SetCurrentView(id)
+		if isCursor {
+			ui.SetCurrentView(id)
+		}
 	}
-	return nil, height
+	return nil, height + 1
 }
 
 func (his *History) drawInputView(x, y, w, h int, ui *gocui.Gui) error {
