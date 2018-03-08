@@ -10,11 +10,10 @@ import (
 )
 
 type ThreadView struct {
-	Thread    []*messages.Message
-	CursorIdx int
-	CursorID  string
-	ViewIDs   map[string]struct{}
-	LeafID    string
+	Thread   []*messages.Message
+	CursorID string
+	ViewIDs  map[string]struct{}
+	LeafID   string
 	sync.RWMutex
 }
 
@@ -60,16 +59,34 @@ func (m *History) UpdateLeaf(id string) {
 	}
 }
 
-// Layout builds a message history in the provided UI
-func (m *History) Layout(ui *gocui.Gui) error {
-	m.ThreadView.Lock()
+func (h *History) destroyOldViews(ui *gocui.Gui) {
+	h.ThreadView.Lock()
 	// destroy old views
-	for id := range m.ViewIDs {
+	for id := range h.ViewIDs {
 		ui.DeleteView(id)
 	}
 	// reset ids
-	m.ViewIDs = make(map[string]struct{})
-	m.ThreadView.Unlock()
+	h.ViewIDs = make(map[string]struct{})
+	h.ThreadView.Unlock()
+
+}
+
+func (h *History) refreshThread() []*messages.Message {
+	h.ThreadView.RLock()
+	items, query := h.Tree.GetItems(h.ThreadView.LeafID, 100)
+	h.ThreadView.RUnlock()
+	h.ThreadView.Lock()
+	h.ThreadView.Thread = items // save the computed ancestry of the current thread
+	h.ThreadView.Unlock()
+	if query != "" {
+		h.Query <- query // query for any unknown message in the ancestry
+	}
+	return items
+}
+
+// Layout builds a message history in the provided UI
+func (m *History) Layout(ui *gocui.Gui) error {
+	m.destroyOldViews(ui)
 
 	maxX, maxY := ui.Size()
 
@@ -78,21 +95,12 @@ func (m *History) Layout(ui *gocui.Gui) error {
 	inputUY := maxY - 4
 	inputW := maxX - 1
 	inputH := 3
-	if v, err := ui.SetView("message-input", inputUX, inputUY, inputUX+inputW, inputUY+inputH); err != nil {
-		if err != gocui.ErrUnknownView {
-			log.Println(err)
-			return err
-		}
-		v.Title = "Compose"
-		v.Editable = true
-		v.Wrap = true
+	if err := m.drawInputView(inputUX, inputUY, inputW, inputH, ui); err != nil {
+		return err
 	}
-	m.ThreadView.RLock()
-	items, query := m.Tree.GetItems(m.ThreadView.LeafID, 100)
-	m.ThreadView.RUnlock()
-	if query != "" {
-		m.Query <- query
-	}
+
+	// get the latest history
+	items := m.refreshThread()
 	currentY := inputUY - 1
 	height := 2
 	m.ThreadView.Lock()
@@ -130,6 +138,19 @@ func (m *History) Layout(ui *gocui.Gui) error {
 		if err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func (his *History) drawInputView(x, y, w, h int, ui *gocui.Gui) error {
+	if v, err := ui.SetView("message-input", x, y, x+w, y+h); err != nil {
+		if err != gocui.ErrUnknownView {
+			log.Println(err)
+			return err
+		}
+		v.Title = "Compose"
+		v.Editable = true
+		v.Wrap = true
 	}
 	return nil
 }
