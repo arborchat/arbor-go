@@ -56,17 +56,18 @@ func (m *History) UpdateMessage(id string) {
 		m.CursorID = msg.UUID
 		m.ThreadView.Unlock()
 	}
-	m.getItems()
+	m.ThreadView.RLock()
+	// force ancestry refresh
+	m.getItems(m.LeafID, 10)
+	m.ThreadView.RUnlock()
 }
 
 // getItems returns a slice of messages starting from the current
-// leaf message and working backward along its ancestry.
-func (m *History) getItems() []*messages.Message {
-	const length = 100
-	items := make([]*messages.Message, length)
-	m.ThreadView.RLock()
-	current := m.Tree.Get(m.LeafID)
-	m.ThreadView.RUnlock()
+// leaf message id and working backward along its ancestry. It will never return
+// more than maxLength messages in the slice
+func (m *History) getItems(leafId string, maxLength int) []*messages.Message {
+	items := make([]*messages.Message, maxLength)
+	current := m.Tree.Get(leafId)
 	if current == nil {
 		return items[:0]
 	}
@@ -123,7 +124,9 @@ func (m *History) Layout(ui *gocui.Gui) error {
 		v.Editable = true
 		v.Wrap = true
 	}
-	items := m.getItems()
+	m.ThreadView.RLock()
+	items := m.getItems(m.ThreadView.LeafID, 100)
+	m.ThreadView.RUnlock()
 	currentY := inputUY - 1
 	height := 2
 	m.ThreadView.Lock()
