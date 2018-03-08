@@ -5,20 +5,14 @@ import (
 	"io"
 	"log"
 
-	"github.com/jroimartin/gocui"
 	messages "github.com/whereswaldon/arbor/messages"
 )
 
-type MessageView interface {
-	Add(*messages.Message)
-	UpdateMessage(string)
-}
-
-// HandleConn reads from the provided connection and dispatches events to the
-// provided MessageListView and Gui as needed to handle new messages coming
-// from the server.
-func HandleConn(conn io.ReadWriteCloser, mlv MessageView, ui *gocui.Gui) {
+// HandleConn reads from the provided connection and writes new messages to the msgs
+// channel as they come in.
+func HandleNewMessages(conn io.ReadWriteCloser, msgs chan<- *messages.Message) {
 	data := make([]byte, 1024)
+	defer close(msgs)
 	for {
 		n, err := conn.Read(data)
 		log.Println("read ", n, " bytes")
@@ -39,9 +33,7 @@ func HandleConn(conn io.ReadWriteCloser, mlv MessageView, ui *gocui.Gui) {
 		switch a.Type {
 		case messages.NEW_MESSAGE:
 			// add the new message
-			mlv.Add(a.Message)
-			mlv.UpdateMessage(a.Message.UUID)
-			ui.Update(func(*gocui.Gui) error { return nil })
+			msgs <- a.Message
 		default:
 			log.Println("Unknown message type: ", string(data))
 			continue

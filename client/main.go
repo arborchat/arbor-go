@@ -27,6 +27,7 @@ func main() {
 	defer ui.Close()
 
 	layoutManager, queries := NewList(NewTree(messages.NewStore()))
+	msgs := make(chan *messages.Message)
 	ui.Highlight = true
 	ui.Cursor = true
 	ui.SelFgColor = gocui.ColorGreen
@@ -37,7 +38,15 @@ func main() {
 		log.Println("Unable to connect", err)
 		return
 	}
-	go clientio.HandleConn(conn, layoutManager, ui)
+	go clientio.HandleNewMessages(conn, msgs)
+	go func() {
+		for newMsg := range msgs {
+			layoutManager.Add(newMsg)
+			layoutManager.UpdateMessage(newMsg.UUID)
+			//redraw
+			ui.Update(func(*gocui.Gui) error { return nil })
+		}
+	}()
 	go clientio.HandleRequests(conn, queries)
 
 	if err := ui.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, quit); err != nil {
