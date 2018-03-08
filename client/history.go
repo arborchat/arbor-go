@@ -185,6 +185,10 @@ func (h *History) drawView(x, y, w int, dir Direction, isCursor bool, id string,
 		if isCursor {
 			ui.SetCurrentView(id)
 		}
+		h.ThreadView.Lock()
+		h.ThreadView.ViewIDs[id] = struct{}{}
+		h.ThreadView.Unlock()
+
 	}
 	return nil, height + 1
 }
