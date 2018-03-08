@@ -168,7 +168,7 @@ func (m *History) Layout(ui *gocui.Gui) error {
 	return nil
 }
 
-func (m *History) Up(g *gocui.Gui, v *gocui.View) error {
+func (m *History) CursorUp(g *gocui.Gui, v *gocui.View) error {
 	m.ThreadView.Lock()
 	defer m.ThreadView.Unlock()
 	if m.CursorID == "" {
@@ -194,7 +194,7 @@ func (m *History) Up(g *gocui.Gui, v *gocui.View) error {
 	}
 }
 
-func (m *History) Down(g *gocui.Gui, v *gocui.View) error {
+func (m *History) CursorDown(g *gocui.Gui, v *gocui.View) error {
 	m.ThreadView.Lock()
 	defer m.ThreadView.Unlock()
 	if m.CursorID == "" {

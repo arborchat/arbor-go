@@ -53,11 +53,11 @@ func main() {
 		log.Panicln(err)
 	}
 
-	if err := ui.SetKeybinding("", gocui.KeyArrowUp, gocui.ModNone, layoutManager.Up); err != nil {
+	if err := ui.SetKeybinding("", gocui.KeyArrowUp, gocui.ModNone, layoutManager.CursorUp); err != nil {
 		log.Panicln(err)
 	}
 
-	if err := ui.SetKeybinding("", gocui.KeyArrowDown, gocui.ModNone, layoutManager.Down); err != nil {
+	if err := ui.SetKeybinding("", gocui.KeyArrowDown, gocui.ModNone, layoutManager.CursorDown); err != nil {
 		log.Panicln(err)
 	}
 
