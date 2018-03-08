@@ -49,16 +49,14 @@ func NewList(store *Tree) (*History, <-chan string) {
 // leaf will be set as the cursor.
 func (m *History) UpdateLeaf(id string) {
 	msg := m.Tree.Get(id)
+	m.ThreadView.Lock()
 	if msg.Parent == m.LeafID || m.LeafID == "" {
-		m.ThreadView.Lock()
 		m.LeafID = msg.UUID
-		m.ThreadView.Unlock()
 	}
 	if m.CursorID == "" {
-		m.ThreadView.Lock()
 		m.CursorID = msg.UUID
-		m.ThreadView.Unlock()
 	}
+	m.ThreadView.Unlock()
 }
 
 func (h *History) destroyOldViews(ui *gocui.Gui) {
@@ -75,12 +73,13 @@ func (h *History) destroyOldViews(ui *gocui.Gui) {
 
 func (h *History) refreshThread() []*messages.Message {
 	h.ThreadView.RLock()
-	items, query := h.Tree.GetItems(h.ThreadView.LeafID, 100)
+	items, query := h.Tree.GetItems(h.ThreadView.LeafID, 1024)
 	h.ThreadView.RUnlock()
 	h.ThreadView.Lock()
 	h.ThreadView.Thread = items // save the computed ancestry of the current thread
 	h.ThreadView.Unlock()
 	if query != "" {
+		log.Println("Querying for message: ", query)
 		h.Query <- query // query for any unknown message in the ancestry
 	}
 	return items
@@ -101,7 +100,7 @@ func (m *History) Layout(ui *gocui.Gui) error {
 	//TODO: draw input box iff we are replying to a message
 
 	// get the latest history
-	//	items := m.refreshThread()
+	_ = m.refreshThread()
 	totalY := maxY // how much vertical space is left for drawing messages
 
 	cursorY := (totalY - 2) / 2
@@ -121,6 +120,9 @@ func (m *History) Layout(ui *gocui.Gui) error {
 func (h *History) drawCursorView(x, y, w int, id string, ui *gocui.Gui) (error, int) {
 	const borderHeight = 2
 	msg := h.Tree.Get(id)
+	if msg == nil {
+		log.Println("Cursor accessed nil message with id:", id)
+	}
 	contents := wrap.WrapString(msg.Content, uint(w))
 	height := strings.Count(contents, "\n") + borderHeight
 	log.Printf("Cursor message at (%d,%d) -> (%d,%d)\n", x, y, x+w, y+height)
@@ -133,6 +135,7 @@ func (h *History) drawCursorView(x, y, w int, id string, ui *gocui.Gui) (error, 
 		v.Title = id
 		v.Wrap = true
 		fmt.Fprint(v, contents)
+		ui.SetCurrentView(id)
 	}
 	return nil, height
 }
@@ -152,64 +155,50 @@ func (his *History) drawInputView(x, y, w, h int, ui *gocui.Gui) error {
 
 func (m *History) CursorUp(g *gocui.Gui, v *gocui.View) error {
 	m.ThreadView.Lock()
-	defer m.ThreadView.Unlock()
-	if m.CursorID == "" {
-		m.CursorID = m.LeafID
-	}
-	msg := m.Get(m.CursorID)
+	id := m.CursorID
+	m.ThreadView.Unlock()
+	msg := m.Get(id)
 	if msg == nil {
-		m.CursorID = m.LeafID
 		log.Println("Error fetching cursor message: %s", m.CursorID)
 		return nil
 	} else if msg.Parent == "" {
-		m.CursorID = m.LeafID
 		log.Println("Cannot move cursor up, nil parent for message: %v", msg)
 		return nil
-	} else if _, ok := m.ViewIDs[msg.Parent]; !ok {
-		m.CursorID = m.LeafID
-		log.Println("Cannot select parent message, not on screen")
+	} else if m.Get(msg.Parent) == nil {
+		log.Println("Refusing to move cursor onto nonlocal message with id", msg.Parent)
 		return nil
 	} else {
+		m.ThreadView.Lock()
 		m.CursorID = msg.Parent
-		_, err := g.SetCurrentView(m.CursorID)
-		return err
+		m.ThreadView.Unlock()
+		return nil
 	}
 }
 
 func (m *History) CursorDown(g *gocui.Gui, v *gocui.View) error {
 	m.ThreadView.Lock()
-	defer m.ThreadView.Unlock()
-	if m.CursorID == "" {
-		m.CursorID = m.LeafID
-	}
-	msg := m.Get(m.CursorID)
+	id := m.CursorID
+	thread := m.Thread
+	m.ThreadView.Unlock()
+	msg := m.Get(id)
 	if msg == nil {
-		m.CursorID = m.LeafID
 		log.Println("Error fetching cursor message: %s", m.CursorID)
 		return nil
 	}
-	// get the children of the cursor message
-	children := m.Children(m.CursorID)
-	if len(children) == 0 {
-		log.Println("Cannot move cursor down, no children for message: %v", msg)
-		return nil
-	}
-	// find the child that is visible
-	onscreen := ""
-	for _, child := range children {
-		if _, ok := m.ViewIDs[child]; ok {
-			onscreen = child
+	var prev int = -1
+	for i, message := range thread {
+		if message.UUID == id {
+			prev = i - 1
+			break
 		}
 	}
 
-	// if no children are visible
-	if onscreen == "" {
-		m.CursorID = m.LeafID
-		log.Println("Cannot select child message, none on screen")
-		return nil
-	} else { // select the visible child
-		m.CursorID = onscreen
-		_, err := g.SetCurrentView(m.CursorID)
-		return err
+	if prev >= 0 {
+		m.ThreadView.Lock()
+		m.CursorID = thread[prev].UUID
+		m.ThreadView.Unlock()
+	} else {
+		log.Println("No previous message")
 	}
+	return nil
 }

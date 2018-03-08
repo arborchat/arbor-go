@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/jroimartin/gocui"
+	"github.com/pkg/profile"
 	"github.com/whereswaldon/arbor/client/clientio"
 	"github.com/whereswaldon/arbor/messages"
 )
@@ -15,6 +16,7 @@ func quit(g *gocui.Gui, v *gocui.View) error {
 }
 
 func main() {
+	defer profile.Start(profile.MemProfile, profile.ProfilePath("."), profile.NoShutdownHook).Stop()
 	if len(os.Args) < 2 {
 		log.Println("Usage: " + os.Args[0] + " <host:port>")
 		return
