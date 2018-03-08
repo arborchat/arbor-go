@@ -51,3 +51,40 @@ func (t *Tree) Children(id string) []string {
 	}
 	return children
 }
+
+// getItems returns a slice of messages starting from the current
+// leaf message id and working backward along its ancestry. It will never return
+// more than maxLength messages in the slice. If it encounters a message ID that is
+// unknown, it will return that in the query value. Otherwise, query will return the
+// empty string.
+func (t *Tree) GetItems(leafId string, maxLength int) (items []*messages.Message, query string) {
+	items = make([]*messages.Message, maxLength)
+	current := t.Get(leafId)
+	if current == nil {
+		return items[:0], ""
+	}
+	count := 1
+	parent := ""
+	for i := range items {
+		items[i] = current
+		if current.Parent == "" {
+			break
+		}
+		parent = current.Parent
+		current = t.Get(current.Parent)
+		if current == nil {
+			//request the message corresponding to parentID
+			query = parent
+			break
+		}
+		count++
+	}
+	return items[:min(count, len(items))], query
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}

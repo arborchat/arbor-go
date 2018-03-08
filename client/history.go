@@ -6,13 +6,15 @@ import (
 	"sync"
 
 	"github.com/jroimartin/gocui"
-	messages "github.com/whereswaldon/arbor/messages"
+	"github.com/whereswaldon/arbor/messages"
 )
 
 type ThreadView struct {
-	CursorID string
-	ViewIDs  map[string]struct{}
-	LeafID   string
+	Thread    []*messages.Message
+	CursorIdx int
+	CursorID  string
+	ViewIDs   map[string]struct{}
+	LeafID    string
 	sync.RWMutex
 }
 
@@ -58,43 +60,8 @@ func (m *History) UpdateMessage(id string) {
 	}
 	m.ThreadView.RLock()
 	// force ancestry refresh
-	m.getItems(m.LeafID, 10)
+	m.Tree.GetItems(m.LeafID, 10)
 	m.ThreadView.RUnlock()
-}
-
-// getItems returns a slice of messages starting from the current
-// leaf message id and working backward along its ancestry. It will never return
-// more than maxLength messages in the slice
-func (m *History) getItems(leafId string, maxLength int) []*messages.Message {
-	items := make([]*messages.Message, maxLength)
-	current := m.Tree.Get(leafId)
-	if current == nil {
-		return items[:0]
-	}
-	count := 1
-	parent := ""
-	for i := range items {
-		items[i] = current
-		if current.Parent == "" {
-			break
-		}
-		parent = current.Parent
-		current = m.Tree.Get(current.Parent)
-		if current == nil {
-			//request the message corresponding to parentID
-			m.Query <- parent
-			break
-		}
-		count++
-	}
-	return items[:min(count, len(items))]
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
 
 // Layout builds a message history in the provided UI
@@ -125,8 +92,11 @@ func (m *History) Layout(ui *gocui.Gui) error {
 		v.Wrap = true
 	}
 	m.ThreadView.RLock()
-	items := m.getItems(m.ThreadView.LeafID, 100)
+	items, query := m.Tree.GetItems(m.ThreadView.LeafID, 100)
 	m.ThreadView.RUnlock()
+	if query != "" {
+		m.Query <- query
+	}
 	currentY := inputUY - 1
 	height := 2
 	m.ThreadView.Lock()
