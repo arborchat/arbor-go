@@ -1,11 +1,13 @@
 package main
 
 import (
-	//	"fmt"
+	"fmt"
 	"log"
+	"strings"
 	"sync"
 
 	"github.com/jroimartin/gocui"
+	wrap "github.com/mitchellh/go-wordwrap"
 	"github.com/whereswaldon/arbor/messages"
 )
 
@@ -101,32 +103,38 @@ func (m *History) Layout(ui *gocui.Gui) error {
 	// get the latest history
 	//	items := m.refreshThread()
 	totalY := maxY // how much vertical space is left for drawing messages
-	const borderHeight = 2
-	height := 2 + borderHeight
 
-	cursorY := (totalY - height) / 2
+	cursorY := (totalY - 2) / 2
 	cursorX := 0
 	cursorId := m.Cursor()
-	if cursorId != "" {
-		if err := m.drawCursorView(cursorX, cursorY, maxX-1, height, cursorId, ui); err != nil {
-			log.Println("error drawing cursor view: ", err)
-			return err
-		}
+	if cursorId == "" {
+		return nil
+	}
+	err, _ := m.drawCursorView(cursorX, cursorY, maxX-1, cursorId, ui)
+	if err != nil {
+		log.Println("error drawing cursor view: ", err)
+		return err
 	}
 	return nil
 }
 
-func (his *History) drawCursorView(x, y, w, h int, id string, ui *gocui.Gui) error {
-	log.Printf("Cursor message at (%d,%d) -> (%d,%d)\n", x, y, x+w, y+h)
-	if v, err := ui.SetView(id, x, y, x+w, y+h); err != nil {
+func (h *History) drawCursorView(x, y, w int, id string, ui *gocui.Gui) (error, int) {
+	const borderHeight = 2
+	msg := h.Tree.Get(id)
+	contents := wrap.WrapString(msg.Content, uint(w))
+	height := strings.Count(contents, "\n") + borderHeight
+	log.Printf("Cursor message at (%d,%d) -> (%d,%d)\n", x, y, x+w, y+height)
+
+	if v, err := ui.SetView(id, x, y, x+w, y+height); err != nil {
 		if err != gocui.ErrUnknownView {
 			log.Println(err)
-			return err
+			return err, 0
 		}
 		v.Title = id
 		v.Wrap = true
+		fmt.Fprint(v, contents)
 	}
-	return nil
+	return nil, height
 }
 
 func (his *History) drawInputView(x, y, w, h int, ui *gocui.Gui) error {
