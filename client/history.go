@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	//	"fmt"
 	"log"
 	"sync"
 
@@ -84,60 +84,47 @@ func (h *History) refreshThread() []*messages.Message {
 	return items
 }
 
+func (h *History) Cursor() string {
+	h.ThreadView.RLock()
+	defer h.ThreadView.RUnlock()
+	return h.ThreadView.CursorID
+}
+
 // Layout builds a message history in the provided UI
 func (m *History) Layout(ui *gocui.Gui) error {
 	m.destroyOldViews(ui)
 
 	maxX, maxY := ui.Size()
 
-	// determine input box coordinates
-	inputUX := 0
-	inputUY := maxY - 4
-	inputW := maxX - 1
-	inputH := 3
-	if err := m.drawInputView(inputUX, inputUY, inputW, inputH, ui); err != nil {
-		return err
-	}
+	//TODO: draw input box iff we are replying to a message
 
 	// get the latest history
-	items := m.refreshThread()
-	currentY := inputUY - 1
-	height := 2
-	m.ThreadView.Lock()
-	defer m.ThreadView.Unlock()
-	for _, item := range items {
-		if currentY < 4 {
-			break
+	//	items := m.refreshThread()
+	totalY := maxY // how much vertical space is left for drawing messages
+	const borderHeight = 2
+	height := 2 + borderHeight
+
+	cursorY := (totalY - height) / 2
+	cursorX := 0
+	cursorId := m.Cursor()
+	if cursorId != "" {
+		if err := m.drawCursorView(cursorX, cursorY, maxX-1, height, cursorId, ui); err != nil {
+			log.Println("error drawing cursor view: ", err)
+			return err
 		}
-		log.Printf("using view coordinates (%d,%d) to (%d,%d)\n",
-			0, currentY-height, maxX-1, currentY)
-		log.Printf("creating view: %s", item.UUID)
-		view, err := ui.SetView(item.UUID, 0, currentY-height, maxX-1, currentY)
-		if err != nil {
-			if err != gocui.ErrUnknownView {
-				log.Panicln("unable to create view for message: ", err)
-			}
-		}
-		m.ViewIDs[item.UUID] = struct{}{}
-		view.Clear()
-		siblings := m.Children(item.Parent)
-		fmt.Fprintf(view, "%d siblings| ", len(siblings)-1)
-		fmt.Fprint(view, item.Content)
-		currentY -= height + 1
 	}
-	if _, ok := m.ViewIDs[m.CursorID]; ok {
-		// view with cursor still on screen
-		_, err := ui.SetCurrentView(m.CursorID)
-		if err != nil {
+	return nil
+}
+
+func (his *History) drawCursorView(x, y, w, h int, id string, ui *gocui.Gui) error {
+	log.Printf("Cursor message at (%d,%d) -> (%d,%d)\n", x, y, x+w, y+h)
+	if v, err := ui.SetView(id, x, y, x+w, y+h); err != nil {
+		if err != gocui.ErrUnknownView {
+			log.Println(err)
 			return err
 		}
-	} else if m.LeafID != "" {
-		// view with cursor off screen
-		m.CursorID = m.LeafID
-		_, err := ui.SetCurrentView(m.LeafID)
-		if err != nil {
-			return err
-		}
+		v.Title = id
+		v.Wrap = true
 	}
 	return nil
 }
