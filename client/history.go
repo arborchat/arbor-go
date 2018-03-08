@@ -58,10 +58,6 @@ func (m *History) UpdateMessage(id string) {
 		m.CursorID = msg.UUID
 		m.ThreadView.Unlock()
 	}
-	m.ThreadView.RLock()
-	// force ancestry refresh
-	m.Tree.GetItems(m.LeafID, 10)
-	m.ThreadView.RUnlock()
 }
 
 // Layout builds a message history in the provided UI
