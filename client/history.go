@@ -16,20 +16,20 @@ type ThreadView struct {
 	sync.RWMutex
 }
 
-type MessageListView struct {
+type History struct {
 	*Tree
 	ThreadView
 	Query chan<- string
 }
 
-// NewList creates a new MessageListView that uses the provided Tree
-// to manage message history. This MessageListView acts as a layout manager
-// for the gocui layout package. The method returns both a MessageListView
+// NewList creates a new History that uses the provided Tree
+// to manage message history. This History acts as a layout manager
+// for the gocui layout package. The method returns both a History
 // and a readonly channel of queries. These queries are message UUIDs that
 // the local store has requested the message contents for.
-func NewList(store *Tree) (*MessageListView, <-chan string) {
+func NewList(store *Tree) (*History, <-chan string) {
 	queryChan := make(chan string)
-	return &MessageListView{
+	return &History{
 		Tree: store,
 		ThreadView: ThreadView{
 			LeafID:   "",
@@ -44,7 +44,7 @@ func NewList(store *Tree) (*MessageListView, <-chan string) {
 // message within the view of the conversation *if* it is a child of
 // the previous current "leaf" message. If there is no cursor, the new
 // leaf will be set as the cursor.
-func (m *MessageListView) UpdateMessage(id string) {
+func (m *History) UpdateMessage(id string) {
 	msg := m.Tree.Get(id)
 	if msg.Parent == m.LeafID || m.LeafID == "" {
 		m.ThreadView.Lock()
@@ -61,7 +61,7 @@ func (m *MessageListView) UpdateMessage(id string) {
 
 // getItems returns a slice of messages starting from the current
 // leaf message and working backward along its ancestry.
-func (m *MessageListView) getItems() []*messages.Message {
+func (m *History) getItems() []*messages.Message {
 	const length = 100
 	items := make([]*messages.Message, length)
 	m.ThreadView.RLock()
@@ -97,7 +97,7 @@ func min(a, b int) int {
 }
 
 // Layout builds a message history in the provided UI
-func (m *MessageListView) Layout(ui *gocui.Gui) error {
+func (m *History) Layout(ui *gocui.Gui) error {
 	m.ThreadView.Lock()
 	// destroy old views
 	for id := range m.ViewIDs {
@@ -165,7 +165,7 @@ func (m *MessageListView) Layout(ui *gocui.Gui) error {
 	return nil
 }
 
-func (m *MessageListView) Up(g *gocui.Gui, v *gocui.View) error {
+func (m *History) Up(g *gocui.Gui, v *gocui.View) error {
 	m.ThreadView.Lock()
 	defer m.ThreadView.Unlock()
 	if m.CursorID == "" {
@@ -191,7 +191,7 @@ func (m *MessageListView) Up(g *gocui.Gui, v *gocui.View) error {
 	}
 }
 
-func (m *MessageListView) Down(g *gocui.Gui, v *gocui.View) error {
+func (m *History) Down(g *gocui.Gui, v *gocui.View) error {
 	m.ThreadView.Lock()
 	defer m.ThreadView.Unlock()
 	if m.CursorID == "" {
