@@ -153,26 +153,40 @@ const down Direction = 1
 
 func (h *History) drawView(x, y, w int, dir Direction, isCursor bool, id string, ui *gocui.Gui) (error, int) {
 	const borderHeight = 2
+	const gutterWidth = 4
 	msg := h.Tree.Get(id)
 	if msg == nil {
 		log.Println("accessed nil message with id:", id)
 	}
-	contents := wrap.WrapString(msg.Content, uint(w))
+	numSiblings := len(h.Tree.Children(msg.Parent)) - 1
+	contents := wrap.WrapString(msg.Content, uint(w-gutterWidth))
 	height := strings.Count(contents, "\n") + borderHeight
 
 	var upperLeftX, upperLeftY, lowerRightX, lowerRightY int
 	if dir == up {
-		upperLeftX = x
+		upperLeftX = x + gutterWidth
 		upperLeftY = y - height
 		lowerRightX = x + w
 		lowerRightY = y
 	} else if dir == down {
-		upperLeftX = x
+		upperLeftX = x + gutterWidth
 		upperLeftY = y
 		lowerRightX = x + w
 		lowerRightY = y + height
 	}
 	log.Printf("message at (%d,%d) -> (%d,%d)\n", upperLeftX, upperLeftY, lowerRightX, lowerRightY)
+	if numSiblings > 0 {
+		if v, err := ui.SetView(id+"-sib", x, upperLeftY, x+gutterWidth, lowerRightY); err != nil {
+			if err != gocui.ErrUnknownView {
+				log.Println(err)
+				return err, 0
+			}
+			fmt.Fprintf(v, "%d", numSiblings)
+			h.ThreadView.Lock()
+			h.ThreadView.ViewIDs[id] = struct{}{}
+			h.ThreadView.Unlock()
+		}
+	}
 
 	if v, err := ui.SetView(id, upperLeftX, upperLeftY, lowerRightX, lowerRightY); err != nil {
 		if err != gocui.ErrUnknownView {
