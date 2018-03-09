@@ -63,6 +63,14 @@ func main() {
 		log.Panicln(err)
 	}
 
+	if err := ui.SetKeybinding("", 'k', gocui.ModNone, layoutManager.CursorUp); err != nil {
+		log.Panicln(err)
+	}
+
+	if err := ui.SetKeybinding("", 'j', gocui.ModNone, layoutManager.CursorDown); err != nil {
+		log.Panicln(err)
+	}
+
 	if err = ui.MainLoop(); err != nil && err != gocui.ErrQuit {
 		log.Println("error with ui:", err)
 	}
