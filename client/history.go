@@ -121,12 +121,13 @@ func (m *History) Layout(ui *gocui.Gui) error {
 		if message.UUID == cursorId {
 			currentIdxBelow = i
 			currentIdxAbove = i
+			log.Println("Cursor message at thread id ", i)
 			break
 		}
 	}
 
 	lowerBound := cursorY + cursorHeight
-	for currentIdxBelow--; currentIdxBelow > 0 && lowerBound < maxY; currentIdxBelow-- {
+	for currentIdxBelow--; currentIdxBelow >= 0 && lowerBound < maxY; currentIdxBelow-- {
 		err, msgHeight := m.drawView(0, lowerBound, maxX-1, down, false, thread[currentIdxBelow].UUID, ui) //draw the cursor message
 		if err != nil {
 			log.Println("error drawing view: ", err)
@@ -272,6 +273,7 @@ func (m *History) CursorLeft(g *gocui.Gui, v *gocui.View) error {
 		m.ThreadView.Lock()
 		m.ThreadView.LeafID = m.Tree.Leaf(newCursor)
 		m.ThreadView.CursorID = newCursor
+		log.Println("Selected leaf :", m.ThreadView.LeafID)
 		m.ThreadView.Unlock()
 		return nil
 	}
@@ -306,6 +308,7 @@ func (m *History) CursorRight(g *gocui.Gui, v *gocui.View) error {
 		m.ThreadView.Lock()
 		m.ThreadView.LeafID = m.Tree.Leaf(newCursor)
 		m.ThreadView.CursorID = newCursor
+		log.Println("Selected leaf :", m.ThreadView.LeafID)
 		m.ThreadView.Unlock()
 		return nil
 	}
