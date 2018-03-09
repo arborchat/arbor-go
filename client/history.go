@@ -115,16 +115,8 @@ func (m *History) Layout(ui *gocui.Gui) error {
 		return err
 	}
 
-	var currentIdxBelow int = -1
-	var currentIdxAbove int = -1
-	for i, message := range thread {
-		if message.UUID == cursorId {
-			currentIdxBelow = i
-			currentIdxAbove = i
-			log.Println("Cursor message at thread id ", i)
-			break
-		}
-	}
+	currentIdxBelow := indexOfMessageId(cursorId, thread)
+	currentIdxAbove := currentIdxBelow
 
 	lowerBound := cursorY + cursorHeight
 	for currentIdxBelow--; currentIdxBelow >= 0 && lowerBound < maxY; currentIdxBelow-- {
@@ -260,13 +252,7 @@ func (m *History) CursorLeft(g *gocui.Gui, v *gocui.View) error {
 		return nil
 	} else {
 		siblings := m.Children(msg.Parent)
-		var index int
-		for i, siblingId := range siblings {
-			if siblingId == id {
-				index = i
-				break
-			}
-		}
+		index := indexOf(id, siblings)
 		index = (index + len(siblings) - 1) % len(siblings)
 		newCursor := siblings[index]
 		log.Printf("Selecting new cursor (old %s) as %s from %v\n", id, newCursor, siblings)
@@ -295,13 +281,7 @@ func (m *History) CursorRight(g *gocui.Gui, v *gocui.View) error {
 		return nil
 	} else {
 		siblings := m.Children(msg.Parent)
-		var index int
-		for i, siblingId := range siblings {
-			if siblingId == id {
-				index = i
-				break
-			}
-		}
+		index := indexOf(id, siblings)
 		index = (index + len(siblings) + 1) % len(siblings)
 		newCursor := siblings[index]
 		log.Printf("Selecting new cursor (old %s) as %s from %v\n", id, newCursor, siblings)
@@ -324,13 +304,7 @@ func (m *History) CursorDown(g *gocui.Gui, v *gocui.View) error {
 		log.Println("Error fetching cursor message: %s", m.CursorID)
 		return nil
 	}
-	var prev int = -1
-	for i, message := range thread {
-		if message.UUID == id {
-			prev = i - 1
-			break
-		}
-	}
+	prev := indexOfMessageId(id, thread) - 1
 
 	if prev >= 0 {
 		m.ThreadView.Lock()
@@ -340,4 +314,22 @@ func (m *History) CursorDown(g *gocui.Gui, v *gocui.View) error {
 		log.Println("No previous message")
 	}
 	return nil
+}
+
+func indexOf(element string, inContainer []string) int {
+	for i, e := range inContainer {
+		if e == element {
+			return i
+		}
+	}
+	return -1
+}
+
+func indexOfMessageId(element string, inContainer []*messages.Message) int {
+	for i, e := range inContainer {
+		if e.UUID == element {
+			return i
+		}
+	}
+	return -1
 }
