@@ -267,7 +267,7 @@ func (m *History) cursorSide(s side, g *gocui.Gui, v *gocui.View) error {
 		siblings := m.Children(msg.Parent)
 		index := indexOf(id, siblings)
 		if s == right {
-			index = (len(siblings) + 1) % len(siblings)
+			index = (index + len(siblings) + 1) % len(siblings)
 		} else {
 			index = (index + len(siblings) - 1) % len(siblings)
 		}

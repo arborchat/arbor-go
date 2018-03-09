@@ -51,40 +51,30 @@ func main() {
 	}()
 	go clientio.HandleRequests(conn, queries)
 
-	if err := ui.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, quit); err != nil {
-		log.Panicln(err)
+	type keybinding struct {
+		viewId  string
+		key     interface{} // must be a rune or gocui.Key
+		mod     gocui.Modifier
+		handler func(*gocui.Gui, *gocui.View) error
+	}
+	bindings := []keybinding{
+		{"", gocui.KeyCtrlC, gocui.ModNone, quit},
+		{"", gocui.KeyArrowUp, gocui.ModNone, layoutManager.CursorUp},
+		{"", gocui.KeyArrowDown, gocui.ModNone, layoutManager.CursorDown},
+		{"", gocui.KeyArrowLeft, gocui.ModNone, layoutManager.CursorLeft},
+		{"", gocui.KeyArrowRight, gocui.ModNone, layoutManager.CursorRight},
+		{"", 'q', gocui.ModNone, quit},
+		{"", 'k', gocui.ModNone, layoutManager.CursorUp},
+		{"", 'j', gocui.ModNone, layoutManager.CursorDown},
+		{"", 'h', gocui.ModNone, layoutManager.CursorLeft},
+		{"", 'l', gocui.ModNone, layoutManager.CursorRight},
 	}
 
-	if err := ui.SetKeybinding("", gocui.KeyArrowUp, gocui.ModNone, layoutManager.CursorUp); err != nil {
-		log.Panicln(err)
-	}
-
-	if err := ui.SetKeybinding("", gocui.KeyArrowDown, gocui.ModNone, layoutManager.CursorDown); err != nil {
-		log.Panicln(err)
-	}
-
-	if err := ui.SetKeybinding("", gocui.KeyArrowLeft, gocui.ModNone, layoutManager.CursorLeft); err != nil {
-		log.Panicln(err)
-	}
-
-	if err := ui.SetKeybinding("", gocui.KeyArrowRight, gocui.ModNone, layoutManager.CursorRight); err != nil {
-		log.Panicln(err)
-	}
-
-	if err := ui.SetKeybinding("", 'k', gocui.ModNone, layoutManager.CursorUp); err != nil {
-		log.Panicln(err)
-	}
-
-	if err := ui.SetKeybinding("", 'j', gocui.ModNone, layoutManager.CursorDown); err != nil {
-		log.Panicln(err)
-	}
-
-	if err := ui.SetKeybinding("", 'h', gocui.ModNone, layoutManager.CursorLeft); err != nil {
-		log.Panicln(err)
-	}
-
-	if err := ui.SetKeybinding("", 'l', gocui.ModNone, layoutManager.CursorRight); err != nil {
-		log.Panicln(err)
+	for _, binding := range bindings {
+		log.Println("registering ", binding.key)
+		if err := ui.SetKeybinding(binding.viewId, binding.key, binding.mod, binding.handler); err != nil {
+			log.Panicln(err)
+		}
 	}
 
 	if err = ui.MainLoop(); err != nil && err != gocui.ErrQuit {
