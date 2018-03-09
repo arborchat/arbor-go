@@ -97,6 +97,14 @@ func handleQuery(msg *ArborMessage, conn io.ReadWriteCloser, store *Store) {
 }
 
 func handleNewMessage(msg *ArborMessage, store *Store, broadcaster *Broadcaster) {
+	if msg.Message.UUID == "" {
+		serverMessage, err := NewMessage(msg.Message.Content)
+		if err != nil {
+			log.Println("Error creating new message", err)
+		}
+		serverMessage.Parent = msg.Parent
+		msg.Message = serverMessage
+	}
 	store.Add(msg.Message)
 	j, err := json.Marshal(msg)
 	if err != nil {

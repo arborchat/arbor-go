@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"sync"
 
 	"github.com/whereswaldon/arbor/messages"
@@ -21,6 +22,9 @@ func NewTree(s *messages.Store) *Tree {
 // Add stores the message and its relationship with its parent within the message
 // tree.
 func (t *Tree) Add(msg *messages.Message) {
+	if msg.UUID == "" {
+		log.Printf("Asked to add message with empty id: %v\n", msg)
+	}
 	t.Store.Add(msg)
 	t.Lock()
 	defer t.Unlock()

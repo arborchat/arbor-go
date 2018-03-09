@@ -63,11 +63,19 @@ func main() {
 		log.Panicln(err)
 	}
 
+	if err := ui.SetKeybinding("", gocui.KeyArrowLeft, gocui.ModNone, layoutManager.CursorLeft); err != nil {
+		log.Panicln(err)
+	}
+
 	if err := ui.SetKeybinding("", 'k', gocui.ModNone, layoutManager.CursorUp); err != nil {
 		log.Panicln(err)
 	}
 
 	if err := ui.SetKeybinding("", 'j', gocui.ModNone, layoutManager.CursorDown); err != nil {
+		log.Panicln(err)
+	}
+
+	if err := ui.SetKeybinding("", 'h', gocui.ModNone, layoutManager.CursorLeft); err != nil {
 		log.Panicln(err)
 	}
 

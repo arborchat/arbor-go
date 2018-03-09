@@ -242,6 +242,72 @@ func (m *History) CursorUp(g *gocui.Gui, v *gocui.View) error {
 	}
 }
 
+func (m *History) CursorLeft(g *gocui.Gui, v *gocui.View) error {
+	m.ThreadView.Lock()
+	id := m.CursorID
+	m.ThreadView.Unlock()
+	msg := m.Get(id)
+	if msg == nil {
+		log.Println("Error fetching cursor message: %s", m.CursorID)
+		return nil
+	} else if msg.Parent == "" {
+		log.Println("Cannot move cursor up, nil parent for message: %v", msg)
+		return nil
+	} else if len(m.Children(msg.Parent)) < 2 {
+		log.Println("Refusing to move cursor onto nonexistent sibling", msg.Parent)
+		return nil
+	} else {
+		siblings := m.Children(msg.Parent)
+		var index int
+		for i, siblingId := range siblings {
+			if siblingId == id {
+				index = i
+				break
+			}
+		}
+		index = (index + len(siblings) - 1) % len(siblings)
+		newCursor := siblings[index]
+		log.Printf("Selecting new cursor (old %s) as %s from %v\n", id, newCursor, siblings)
+		m.ThreadView.Lock()
+		//noop
+		m.ThreadView.Unlock()
+		return nil
+	}
+}
+
+func (m *History) CursorRight(g *gocui.Gui, v *gocui.View) error {
+	m.ThreadView.Lock()
+	id := m.CursorID
+	m.ThreadView.Unlock()
+	msg := m.Get(id)
+	if msg == nil {
+		log.Println("Error fetching cursor message: %s", m.CursorID)
+		return nil
+	} else if msg.Parent == "" {
+		log.Println("Cannot move cursor up, nil parent for message: %v", msg)
+		return nil
+	} else if len(m.Children(msg.Parent)) < 2 {
+		log.Println("Refusing to move cursor onto nonexistent sibling", msg.Parent)
+		return nil
+	} else {
+		siblings := m.Children(msg.Parent)
+		var index int
+		for i, siblingId := range siblings {
+			if siblingId == id {
+				index = i
+				break
+			}
+		}
+		index = (index + len(siblings) + 1) % len(siblings)
+		newCursor := siblings[index]
+		log.Printf("Selecting new cursor (old %s) as %s from %v\n", id, newCursor, siblings)
+		m.ThreadView.Lock()
+		//noop
+		m.ThreadView.Unlock()
+		return nil
+	}
+}
+
 func (m *History) CursorDown(g *gocui.Gui, v *gocui.View) error {
 	m.ThreadView.Lock()
 	id := m.CursorID
