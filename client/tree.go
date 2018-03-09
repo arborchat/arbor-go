@@ -56,6 +56,17 @@ func (t *Tree) Children(id string) []string {
 	return children
 }
 
+// Leaf returns a leaf node with the given id in its ancestry
+func (t *Tree) Leaf(id string) string {
+	current := id
+	children := t.Children(id)
+	for len(children) > 0 {
+		current = children[0]
+		children = t.Children(children[0])
+	}
+	return current
+}
+
 // getItems returns a slice of messages starting from the current
 // leaf message id and working backward along its ancestry. It will never return
 // more than maxLength messages in the slice. If it encounters a message ID that is

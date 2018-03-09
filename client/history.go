@@ -176,14 +176,15 @@ func (h *History) drawView(x, y, w int, dir Direction, isCursor bool, id string,
 	}
 	log.Printf("message at (%d,%d) -> (%d,%d)\n", upperLeftX, upperLeftY, lowerRightX, lowerRightY)
 	if numSiblings > 0 {
-		if v, err := ui.SetView(id+"-sib", x, upperLeftY, x+gutterWidth, lowerRightY); err != nil {
+		name := id + "sib"
+		if v, err := ui.SetView(name, x, upperLeftY, x+gutterWidth, lowerRightY); err != nil {
 			if err != gocui.ErrUnknownView {
 				log.Println(err)
 				return err, 0
 			}
 			fmt.Fprintf(v, "%d", numSiblings)
 			h.ThreadView.Lock()
-			h.ThreadView.ViewIDs[id] = struct{}{}
+			h.ThreadView.ViewIDs[name] = struct{}{}
 			h.ThreadView.Unlock()
 		}
 	}
@@ -269,7 +270,8 @@ func (m *History) CursorLeft(g *gocui.Gui, v *gocui.View) error {
 		newCursor := siblings[index]
 		log.Printf("Selecting new cursor (old %s) as %s from %v\n", id, newCursor, siblings)
 		m.ThreadView.Lock()
-		//noop
+		m.ThreadView.LeafID = m.Tree.Leaf(newCursor)
+		m.ThreadView.CursorID = newCursor
 		m.ThreadView.Unlock()
 		return nil
 	}
@@ -302,7 +304,8 @@ func (m *History) CursorRight(g *gocui.Gui, v *gocui.View) error {
 		newCursor := siblings[index]
 		log.Printf("Selecting new cursor (old %s) as %s from %v\n", id, newCursor, siblings)
 		m.ThreadView.Lock()
-		//noop
+		m.ThreadView.LeafID = m.Tree.Leaf(newCursor)
+		m.ThreadView.CursorID = newCursor
 		m.ThreadView.Unlock()
 		return nil
 	}
