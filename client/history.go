@@ -236,36 +236,20 @@ func (m *History) CursorUp(g *gocui.Gui, v *gocui.View) error {
 	}
 }
 
-func (m *History) CursorLeft(g *gocui.Gui, v *gocui.View) error {
-	m.ThreadView.Lock()
-	id := m.CursorID
-	m.ThreadView.Unlock()
-	msg := m.Get(id)
-	if msg == nil {
-		log.Println("Error fetching cursor message: %s", m.CursorID)
-		return nil
-	} else if msg.Parent == "" {
-		log.Println("Cannot move cursor up, nil parent for message: %v", msg)
-		return nil
-	} else if len(m.Children(msg.Parent)) < 2 {
-		log.Println("Refusing to move cursor onto nonexistent sibling", msg.Parent)
-		return nil
-	} else {
-		siblings := m.Children(msg.Parent)
-		index := indexOf(id, siblings)
-		index = (index + len(siblings) - 1) % len(siblings)
-		newCursor := siblings[index]
-		log.Printf("Selecting new cursor (old %s) as %s from %v\n", id, newCursor, siblings)
-		m.ThreadView.Lock()
-		m.ThreadView.LeafID = m.Tree.Leaf(newCursor)
-		m.ThreadView.CursorID = newCursor
-		log.Println("Selected leaf :", m.ThreadView.LeafID)
-		m.ThreadView.Unlock()
-		return nil
-	}
+func (m *History) CursorRight(g *gocui.Gui, v *gocui.View) error {
+	return m.cursorSide(right, g, v)
 }
 
-func (m *History) CursorRight(g *gocui.Gui, v *gocui.View) error {
+func (m *History) CursorLeft(g *gocui.Gui, v *gocui.View) error {
+	return m.cursorSide(left, g, v)
+}
+
+type side int
+
+const left side = 0
+const right side = 1
+
+func (m *History) cursorSide(s side, g *gocui.Gui, v *gocui.View) error {
 	m.ThreadView.Lock()
 	id := m.CursorID
 	m.ThreadView.Unlock()
@@ -282,7 +266,11 @@ func (m *History) CursorRight(g *gocui.Gui, v *gocui.View) error {
 	} else {
 		siblings := m.Children(msg.Parent)
 		index := indexOf(id, siblings)
-		index = (index + len(siblings) + 1) % len(siblings)
+		if s == right {
+			index = (len(siblings) + 1) % len(siblings)
+		} else {
+			index = (index + len(siblings) - 1) % len(siblings)
+		}
 		newCursor := siblings[index]
 		log.Printf("Selecting new cursor (old %s) as %s from %v\n", id, newCursor, siblings)
 		m.ThreadView.Lock()
