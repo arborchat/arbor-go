@@ -15,8 +15,7 @@ Things to do:
 - ~~Implement a test client that creates random subtrees as the server runs.~~
 - ~~Implement a graphical indicator for when a message has siblings.~~
 - ~~Implement scrolling through history relative to an arbitrary cursor, rather than the current leaf message~~
-- Implement subtree switching and find a good heuristic for choosing the
-  default path within a subtree the first time that you view it
+- ~~Implement subtree switching and find a good heuristic for choosing the default path within a subtree the first time that you view it~~
 - Implement replies (easy once the other stuff is done).
 - Implement a more robust protocol with version numbers, length indicators
   (for fast processing), usernames, and timestamps.
