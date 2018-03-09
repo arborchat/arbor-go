@@ -159,7 +159,7 @@ func (h *History) drawView(x, y, w int, dir Direction, isCursor bool, id string,
 		log.Println("accessed nil message with id:", id)
 	}
 	numSiblings := len(h.Tree.Children(msg.Parent)) - 1
-	contents := wrap.WrapString(msg.Content, uint(w-gutterWidth))
+	contents := wrap.WrapString(msg.Content, uint(w-gutterWidth-1))
 	height := strings.Count(contents, "\n") + borderHeight
 
 	var upperLeftX, upperLeftY, lowerRightX, lowerRightY int

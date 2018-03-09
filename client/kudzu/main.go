@@ -9,6 +9,7 @@ import (
 	"net"
 	"os"
 
+	"github.com/gambrell/lorem"
 	messages "github.com/whereswaldon/arbor/messages"
 )
 
@@ -51,8 +52,8 @@ func main() {
 				a := &messages.ArborMessage{
 					Type: messages.NEW_MESSAGE,
 					Message: &messages.Message{
-						Parent:  a.Message.Parent,
-						Content: fmt.Sprintf("%d", replyCounter),
+						Parent:  a.Message.UUID,
+						Content: fmt.Sprintf("%d", replyCounter) + lorem.Lorem(rand.Intn(128), "words", false),
 					},
 				}
 				replyCounter++
