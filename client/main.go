@@ -28,7 +28,7 @@ func main() {
 	}
 	defer ui.Close()
 
-	layoutManager, queries := NewList(NewTree(messages.NewStore()))
+	layoutManager, queries, outbound := NewList(NewTree(messages.NewStore()))
 	msgs := make(chan *messages.Message)
 	ui.Highlight = true
 	ui.Cursor = true
@@ -50,6 +50,7 @@ func main() {
 		}
 	}()
 	go clientio.HandleRequests(conn, queries)
+	go clientio.HandleOutbound(conn, outbound)
 
 	type keybinding struct {
 		viewId  string

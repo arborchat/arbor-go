@@ -52,16 +52,19 @@ func (t *ThreadView) ClearReply() {
 type History struct {
 	*Tree
 	ThreadView
-	Query chan<- string
+	Query    chan<- string
+	Outbound chan<- *messages.Message
 }
 
 // NewList creates a new History that uses the provided Tree
 // to manage message history. This History acts as a layout manager
-// for the gocui layout package. The method returns both a History
-// and a readonly channel of queries. These queries are message UUIDs that
+// for the gocui layout package. The method returns a History, a readonly
+// channel of queries, and a readonly channel of new messages to be sent
+// to the sever. The queries are message UUIDs that
 // the local store has requested the message contents for.
-func NewList(store *Tree) (*History, <-chan string) {
+func NewList(store *Tree) (*History, <-chan string, <-chan *messages.Message) {
 	queryChan := make(chan string)
+	outChan := make(chan *messages.Message)
 	return &History{
 		Tree: store,
 		ThreadView: ThreadView{
@@ -69,8 +72,9 @@ func NewList(store *Tree) (*History, <-chan string) {
 			CursorID: "",
 			ViewIDs:  make(map[string]struct{}),
 		},
-		Query: queryChan,
-	}, queryChan
+		Query:    queryChan,
+		Outbound: outChan,
+	}, queryChan, outChan
 }
 
 // UpdateLeaf sets the provided UUID as the ID of the current "leaf"
@@ -258,16 +262,25 @@ func (m *History) BeginReply(g *gocui.Gui, v *gocui.View) error {
 }
 
 func (m *History) SendReply(g *gocui.Gui, v *gocui.View) error {
+	if !m.IsReplying() {
+		return nil
+	}
 	data := make([]byte, 1024)
-	_, err := v.Read(data)
+	n, err := v.Read(data)
 	if err != nil && err != io.EOF {
 		log.Println("Err reading composed message", err)
 		return err
 	}
 	id := m.GetReplyId()
+	g.DeleteKeybindings(ReplyView) // apparently, deleting the view doesn't do this
 	g.DeleteView(ReplyView)
 	m.ClearReply()
+	msg := &messages.Message{
+		Parent:  id,
+		Content: string(data[:n]),
+	}
 	log.Printf("Sending reply to %s: %s\n", id, string(data))
+	m.Outbound <- msg
 	return nil
 }
 

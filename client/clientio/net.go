@@ -68,3 +68,29 @@ func HandleRequests(conn io.ReadWriteCloser, requestedIds <-chan string) {
 		}
 	}
 }
+
+// HandleOutbound reads from a channel of message structs and sends each one as a
+// new message to the server
+func HandleOutbound(conn io.ReadWriteCloser, outbound <-chan *messages.Message) {
+	for out := range outbound {
+		a := &messages.ArborMessage{
+			Type:    messages.NEW_MESSAGE,
+			Message: out,
+		}
+		data, err := json.Marshal(a)
+		if err != nil {
+			log.Println("Failed to marshal request", err)
+			continue
+		}
+		log.Println("Sending message: ", string(data))
+		_, err = conn.Write(data)
+		if err != nil {
+			if err == io.EOF {
+				log.Println("Connection to server closed, writer shutting down", err)
+				break
+			}
+			log.Println("Failed to write request", err)
+			continue
+		}
+	}
+}
