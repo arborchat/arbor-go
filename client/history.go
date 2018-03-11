@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"strings"
 	"sync"
@@ -12,11 +13,40 @@ import (
 )
 
 type ThreadView struct {
-	Thread   []*messages.Message
-	CursorID string
-	ViewIDs  map[string]struct{}
-	LeafID   string
+	Thread    []*messages.Message
+	CursorID  string
+	ViewIDs   map[string]struct{}
+	LeafID    string
+	ReplyToId string
 	sync.RWMutex
+}
+
+const ReplyView = "reply-view"
+
+func (t *ThreadView) ReplyTo(id string) {
+	t.Lock()
+	t.ReplyToId = id
+	t.Unlock()
+}
+
+func (t ThreadView) IsReplying() bool {
+	t.RLock()
+	replying := t.ReplyToId != ""
+	t.RUnlock()
+	return replying
+}
+
+func (t ThreadView) GetReplyId() string {
+	t.RLock()
+	id := t.ReplyToId
+	t.RUnlock()
+	return id
+}
+
+func (t *ThreadView) ClearReply() {
+	t.Lock()
+	t.ReplyToId = ""
+	t.Unlock()
 }
 
 type History struct {
@@ -97,8 +127,6 @@ func (m *History) Layout(ui *gocui.Gui) error {
 
 	maxX, maxY := ui.Size()
 
-	//TODO: draw input box iff we are replying to a message
-
 	// get the latest history
 	thread := m.refreshThread()
 	totalY := maxY // how much vertical space is left for drawing messages
@@ -119,6 +147,7 @@ func (m *History) Layout(ui *gocui.Gui) error {
 	currentIdxAbove := currentIdxBelow
 
 	lowerBound := cursorY + cursorHeight
+	replyY := lowerBound
 	for currentIdxBelow--; currentIdxBelow >= 0 && lowerBound < maxY; currentIdxBelow-- {
 		err, msgHeight := m.drawView(0, lowerBound, maxX-1, down, false, thread[currentIdxBelow].UUID, ui) //draw the cursor message
 		if err != nil {
@@ -135,6 +164,9 @@ func (m *History) Layout(ui *gocui.Gui) error {
 			return err
 		}
 		upperBound -= msgHeight
+	}
+	if m.IsReplying() {
+		m.drawReplyView(0, replyY, maxX-1, 5, ui)
 	}
 	return nil
 }
@@ -201,20 +233,48 @@ func (h *History) drawView(x, y, w int, dir Direction, isCursor bool, id string,
 	return nil, height + 1
 }
 
-func (his *History) drawInputView(x, y, w, h int, ui *gocui.Gui) error {
-	if v, err := ui.SetView("message-input", x, y, x+w, y+h); err != nil {
+func (his *History) drawReplyView(x, y, w, h int, ui *gocui.Gui) error {
+	if v, err := ui.SetView(ReplyView, x, y, x+w, y+h); err != nil {
 		if err != gocui.ErrUnknownView {
 			log.Println(err)
 			return err
 		}
-		v.Title = "Compose"
+		v.Title = "Reply to " + his.GetReplyId()
 		v.Editable = true
 		v.Wrap = true
+		ui.SetKeybinding(ReplyView, gocui.KeyEnter, gocui.ModNone, his.SendReply)
 	}
+	ui.SetCurrentView(ReplyView)
+	ui.SetViewOnTop(ReplyView)
+	return nil
+}
+
+func (m *History) BeginReply(g *gocui.Gui, v *gocui.View) error {
+	m.ThreadView.Lock()
+	id := m.CursorID
+	m.ThreadView.Unlock()
+	m.ReplyTo(id)
+	return nil
+}
+
+func (m *History) SendReply(g *gocui.Gui, v *gocui.View) error {
+	data := make([]byte, 1024)
+	_, err := v.Read(data)
+	if err != nil && err != io.EOF {
+		log.Println("Err reading composed message", err)
+		return err
+	}
+	id := m.GetReplyId()
+	g.DeleteView(ReplyView)
+	m.ClearReply()
+	log.Printf("Sending reply to %s: %s\n", id, string(data))
 	return nil
 }
 
 func (m *History) CursorUp(g *gocui.Gui, v *gocui.View) error {
+	if m.IsReplying() {
+		return nil
+	}
 	m.ThreadView.Lock()
 	id := m.CursorID
 	m.ThreadView.Unlock()
@@ -250,6 +310,9 @@ const left side = 0
 const right side = 1
 
 func (m *History) cursorSide(s side, g *gocui.Gui, v *gocui.View) error {
+	if m.IsReplying() {
+		return nil
+	}
 	m.ThreadView.Lock()
 	id := m.CursorID
 	m.ThreadView.Unlock()
@@ -283,6 +346,9 @@ func (m *History) cursorSide(s side, g *gocui.Gui, v *gocui.View) error {
 }
 
 func (m *History) CursorDown(g *gocui.Gui, v *gocui.View) error {
+	if m.IsReplying() {
+		return nil
+	}
 	m.ThreadView.Lock()
 	id := m.CursorID
 	thread := m.Thread

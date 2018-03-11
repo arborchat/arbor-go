@@ -63,11 +63,14 @@ func main() {
 		{"", gocui.KeyArrowDown, gocui.ModNone, layoutManager.CursorDown},
 		{"", gocui.KeyArrowLeft, gocui.ModNone, layoutManager.CursorLeft},
 		{"", gocui.KeyArrowRight, gocui.ModNone, layoutManager.CursorRight},
-		{"", 'q', gocui.ModNone, quit},
-		{"", 'k', gocui.ModNone, layoutManager.CursorUp},
-		{"", 'j', gocui.ModNone, layoutManager.CursorDown},
-		{"", 'h', gocui.ModNone, layoutManager.CursorLeft},
-		{"", 'l', gocui.ModNone, layoutManager.CursorRight},
+		/*
+			{"", 'q', gocui.ModNone, quit},
+			{"", 'k', gocui.ModNone, layoutManager.CursorUp},
+			{"", 'j', gocui.ModNone, layoutManager.CursorDown},
+			{"", 'h', gocui.ModNone, layoutManager.CursorLeft},
+			{"", 'l', gocui.ModNone, layoutManager.CursorRight},
+		*/
+		{"", gocui.KeyEnter, gocui.ModNone, layoutManager.BeginReply},
 	}
 
 	for _, binding := range bindings {
