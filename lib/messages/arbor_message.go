@@ -3,12 +3,16 @@ package messages
 type ArborMessageType uint8
 
 const (
-	QUERY          = 0
-	NEW_MESSAGE    = 1
-	CREATE_MESSAGE = 2
+	WELCOME     = 0
+	QUERY       = 1
+	NEW_MESSAGE = 2
 )
 
 type ArborMessage struct {
-	Type ArborMessageType
+	Type   ArborMessageType
+	Root   string
+	Recent []string
+	Major  uint8
+	Minor  uint8
 	*Message
 }
