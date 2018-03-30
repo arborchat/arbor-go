@@ -3,11 +3,11 @@
 Arbor is an experimental chat protocol that models a conversation
 as a tree of messages instead of an ordered list. This means that
 the conversation can organically diverge into several conversations
-without the conversations appearing interleaved.
+without the messages appearing interleaved.
 
 Arbor is unbelievably primitive right now. With time, it may develop
-into something usable, but right now you can't even send messages on
-the default client.
+into something usable, but be warned that it is not currently a delightful
+user experience.
 
 ## Testing Arbor
 If you'd like to see where things stand, you should be able to do the following:
@@ -42,4 +42,5 @@ Things to do:
 - ~~Implement a more robust protocol with version numbers, length indicators~~
   (for fast processing), usernames, and timestamps.
 - Investigate arbor server clustering by having a new server connect as a client to an old one.
-- Fix JSON parser so that all stacked messages are processed.
+- ~~Fix JSON parser so that all stacked messages are processed.~~
+- Now that the protocol is somewhat specified, write test cases to ensure that the implementation is conformant.
