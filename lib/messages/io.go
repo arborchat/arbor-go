@@ -9,15 +9,11 @@ import (
 func MakeMessageWriter(conn io.ReadWriteCloser) chan<- *ArborMessage {
 	input := make(chan *ArborMessage)
 	go func() {
+		encoder := json.NewEncoder(conn)
 		for message := range input {
-			data, err := json.Marshal(message)
+			err := encoder.Encode(message)
 			if err != nil {
-				log.Println("Error marshalling welcome", err)
-				return
-			}
-			_, err = conn.Write(data)
-			if err != nil {
-				log.Println("Error sending welcome", err)
+				log.Println("Error encoding message", err)
 				return
 			}
 		}
@@ -27,20 +23,15 @@ func MakeMessageWriter(conn io.ReadWriteCloser) chan<- *ArborMessage {
 
 func MakeMessageReader(conn io.ReadWriteCloser) <-chan *ArborMessage {
 	output := make(chan *ArborMessage)
-	data := make([]byte, 1024)
 	go func() {
 		defer close(output)
+		decoder := json.NewDecoder(conn)
 		for {
-			n, err := conn.Read(data)
-			if err != nil {
-				log.Println("Error reading from conn:", err)
-				return
-			}
 			a := &ArborMessage{}
-			err = json.Unmarshal(data[:n], a)
+			err := decoder.Decode(a)
 			if err != nil {
 				log.Println("Error decoding json:", err)
-				continue
+				return
 			}
 			output <- a
 		}
