@@ -24,9 +24,9 @@ Then:
 
 ## Controls
 
-Up/Down - Move cursor forward/backward in current thread view
-Left/Right - If the message under the cursor has siblings in the tree, switch to them and follow that history to a leaf message
-Enter - Compose a reply to the highlighted message (press enter again to send)
+* Up/Down - Move cursor forward/backward in current thread view
+* Left/Right - If the message under the cursor has siblings in the tree, switch to them and follow that history to a leaf message
+* Enter - Compose a reply to the highlighted message (press enter again to send)
 
 ## Future Work
 
