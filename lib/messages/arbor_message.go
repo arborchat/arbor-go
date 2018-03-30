@@ -1,5 +1,7 @@
 package messages
 
+import "encoding/json"
+
 type ArborMessageType uint8
 
 const (
@@ -15,4 +17,12 @@ type ArborMessage struct {
 	Major  uint8
 	Minor  uint8
 	*Message
+}
+
+func (m *ArborMessage) String() string {
+
+	data, _ := json.Marshal(m)
+	dataString := string(data)
+	return dataString
+
 }
