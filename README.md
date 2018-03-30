@@ -39,8 +39,8 @@ Things to do:
 - ~~Implement subtree switching and find a good heuristic for choosing the default path within a subtree the first time that you view it~~
 - ~~Implement replies (easy once the other stuff is done).~~
 - Implement a visual notification of unread messages
-- ~~Implement a more robust protocol with version numbers, length indicators~~
-  (for fast processing), usernames, and timestamps.
+- ~~Implement a more robust protocol with version numbers, usernames, and timestamps.~~
+- Implement a more robust protocol with length headers for fast processing.
 - Investigate arbor server clustering by having a new server connect as a client to an old one.
 - ~~Fix JSON parser so that all stacked messages are processed.~~
 - Now that the protocol is somewhat specified, write test cases to ensure that the implementation is conformant.
