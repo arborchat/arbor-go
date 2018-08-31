@@ -9,6 +9,7 @@ import (
 func MakeMessageWriter(conn io.ReadWriteCloser) chan<- *ArborMessage {
 	input := make(chan *ArborMessage)
 	go func() {
+    		defer close(input)
 		encoder := json.NewEncoder(conn)
 		for message := range input {
 			err := encoder.Encode(message)
