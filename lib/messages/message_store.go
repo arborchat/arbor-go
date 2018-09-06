@@ -1,29 +1,40 @@
 package messages
 
-import (
-	"sync"
-)
-
 type Store struct {
-	sync.RWMutex
-	m map[string]*Message
+	m        map[string]*Message
+	add      chan *Message
+	request  chan string
+	response chan *Message
 }
 
 func NewStore() *Store {
-	return &Store{
+	s := &Store{
 		m: make(map[string]*Message),
+		add: make(chan *Message),
+		request: make(chan string),
+		response: make(chan *Message),
+	}
+	go s.dispatch()
+	return s
+}
+
+func (s *Store) dispatch() {
+	for {
+		select {
+		case msg := <-s.add:
+			s.m[msg.UUID] = msg
+		case id := <-s.request:
+			value, _ := s.m[id]
+			s.response <- value
+		}
 	}
 }
 
 func (s *Store) Get(uuid string) *Message {
-	s.RLock()
-	msg, _ := s.m[uuid]
-	s.RUnlock()
-	return msg
+	s.request <- uuid
+	return <-s.response
 }
 
 func (s *Store) Add(msg *Message) {
-	s.Lock()
-	s.m[msg.UUID] = msg
-	s.Unlock()
+	s.add <- msg
 }
