@@ -1,6 +1,9 @@
 package arbor
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 const (
 	// WelcomeType should be used as the `Type` field of a WELCOME ProtocolMessage
@@ -28,6 +31,32 @@ type ProtocolMessage struct {
 	// Message is the actual chat message content, if any. This is currently only
 	// used in NEW_MESSAGE messages
 	*ChatMessage
+}
+
+// MarshalJSON transforms a ProtocolMessage into JSON
+func (m *ProtocolMessage) MarshalJSON() ([]byte, error) {
+	switch m.Type {
+	case WelcomeType:
+		return json.Marshal(struct {
+			Type   uint8
+			Root   string
+			Recent []string
+			Major  uint8
+			Minor  uint8
+		}{Type: m.Type, Root: m.Root, Recent: m.Recent, Major: m.Major, Minor: m.Minor})
+	case QueryType:
+		return json.Marshal(struct {
+			UUID string
+			Type uint8
+		}{UUID: m.UUID, Type: m.Type})
+	case NewMessageType:
+		return json.Marshal(struct {
+			*ChatMessage
+			Type uint8
+		}{ChatMessage: m.ChatMessage, Type: m.Type})
+	default:
+		return nil, fmt.Errorf("Unknown message type, could not marshal")
+	}
 }
 
 // String returns a JSON representation of the message as a string.
