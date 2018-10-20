@@ -29,3 +29,20 @@ func TestNewChatMessage(t *testing.T) {
 		t.Errorf("Timestamp invalid (either in the future or before the epoch): %d", m.Timestamp)
 	}
 }
+
+// TestAssignID ensures that the AssignID function actually populates the UUID field
+// of the ChatMessage
+func TestAssignID(t *testing.T) {
+	m, err := arbor.NewChatMessage(testContent)
+	if err != nil || m == nil {
+		t.Skip("Unable to create message")
+	}
+	err = m.AssignID()
+	if err != nil {
+		t.Error("Failed to assign UUID", err)
+		return
+	}
+	if m.UUID == "" {
+		t.Error("No UUID assigned", m)
+	}
+}
