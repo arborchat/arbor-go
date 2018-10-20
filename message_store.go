@@ -1,5 +1,8 @@
 package messages
 
+// Store is a data structure that holds ArborMessages and allows them
+// to be easily looked up by their identifiers. It is safe for
+// concurrent use.
 type Store struct {
 	m        map[string]*Message
 	add      chan *Message
@@ -7,11 +10,12 @@ type Store struct {
 	response chan *Message
 }
 
+// NewStore creates a Store that is ready to be used.
 func NewStore() *Store {
 	s := &Store{
-		m: make(map[string]*Message),
-		add: make(chan *Message),
-		request: make(chan string),
+		m:        make(map[string]*Message),
+		add:      make(chan *Message),
+		request:  make(chan string),
 		response: make(chan *Message),
 	}
 	go s.dispatch()
@@ -30,11 +34,13 @@ func (s *Store) dispatch() {
 	}
 }
 
+// Get retrieves the message with a UUID from the store.
 func (s *Store) Get(uuid string) *Message {
 	s.request <- uuid
 	return <-s.response
 }
 
+// Add inserts the given message into the store.
 func (s *Store) Add(msg *Message) {
 	s.add <- msg
 }
