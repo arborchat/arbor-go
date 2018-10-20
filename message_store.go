@@ -1,22 +1,22 @@
-package messages
+package arbor
 
-// Store is a data structure that holds ArborMessages and allows them
+// Store is a data structure that holds ChatMessages and allows them
 // to be easily looked up by their identifiers. It is safe for
 // concurrent use.
 type Store struct {
-	m        map[string]*Message
-	add      chan *Message
+	m        map[string]*ChatMessage
+	add      chan *ChatMessage
 	request  chan string
-	response chan *Message
+	response chan *ChatMessage
 }
 
 // NewStore creates a Store that is ready to be used.
 func NewStore() *Store {
 	s := &Store{
-		m:        make(map[string]*Message),
-		add:      make(chan *Message),
+		m:        make(map[string]*ChatMessage),
+		add:      make(chan *ChatMessage),
 		request:  make(chan string),
-		response: make(chan *Message),
+		response: make(chan *ChatMessage),
 	}
 	go s.dispatch()
 	return s
@@ -35,12 +35,12 @@ func (s *Store) dispatch() {
 }
 
 // Get retrieves the message with a UUID from the store.
-func (s *Store) Get(uuid string) *Message {
+func (s *Store) Get(uuid string) *ChatMessage {
 	s.request <- uuid
 	return <-s.response
 }
 
 // Add inserts the given message into the store.
-func (s *Store) Add(msg *Message) {
+func (s *Store) Add(msg *ChatMessage) {
 	s.add <- msg
 }

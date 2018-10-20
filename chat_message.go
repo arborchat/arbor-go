@@ -1,4 +1,4 @@
-package messages
+package arbor
 
 import (
 	"time"
@@ -7,8 +7,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Message represents a single chat message sent between users.
-type Message struct {
+// ChatMessage represents a single chat message sent between users.
+type ChatMessage struct {
 	UUID      string
 	Parent    string
 	Content   string
@@ -16,11 +16,11 @@ type Message struct {
 	Timestamp int64
 }
 
-// NewMessage constructs a Message with the provided content.
+// NewChatMessage constructs a ChatMessage with the provided content.
 // It's not necessary to create messages with this function,
 // but it sets the timestamp for you.
-func NewMessage(content string) (*Message, error) {
-	return &Message{
+func NewChatMessage(content string) (*ChatMessage, error) {
+	return &ChatMessage{
 		Parent:    "",
 		Content:   content,
 		Timestamp: time.Now().Unix(),
@@ -30,7 +30,7 @@ func NewMessage(content string) (*Message, error) {
 
 // AssignID generates a new UUID and sets it as the ID for the
 // message.
-func (m *Message) AssignID() error {
+func (m *ChatMessage) AssignID() error {
 	id, err := uuid.NewV4()
 	if err != nil {
 		return errors.Wrapf(err, "Unable to generate UUID")
@@ -41,8 +41,8 @@ func (m *Message) AssignID() error {
 
 // Reply returns a new message with the given content that has
 // its parent, content, and timestamp already configured.
-func (m *Message) Reply(content string) (*Message, error) {
-	reply, err := NewMessage(content)
+func (m *ChatMessage) Reply(content string) (*ChatMessage, error) {
+	reply, err := NewChatMessage(content)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Unable to reply")
 	}

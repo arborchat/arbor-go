@@ -1,4 +1,4 @@
-package messages
+package arbor
 
 import (
 	"encoding/json"
@@ -7,11 +7,11 @@ import (
 )
 
 // MakeMessageWriter wraps the io.ReadCloser and returns a channel of
-// ArborMessage pointers. Any ArborMessage sent over that channel will be
+// ProtocolMessage pointers. Any ArborMessage sent over that channel will be
 // written onto the io.ReadCloser as JSON. This function handles all
 // marshalling.
-func MakeMessageWriter(conn io.WriteCloser) chan<- *ArborMessage {
-	input := make(chan *ArborMessage)
+func MakeMessageWriter(conn io.WriteCloser) chan<- *ProtocolMessage {
+	input := make(chan *ProtocolMessage)
 	go func() {
 		defer close(input)
 		encoder := json.NewEncoder(conn)
@@ -27,16 +27,16 @@ func MakeMessageWriter(conn io.WriteCloser) chan<- *ArborMessage {
 }
 
 // MakeMessageReader wraps the io.ReadCloser and returns a channel of
-// ArborMessage pointers. Any JSON received over the io.ReadCloser will
-// be unmarshalled into an ArborMessage struct and sent over the returned
+// ProtocolMessage pointers. Any JSON received over the io.ReadCloser will
+// be unmarshalled into an ProtocolMessage struct and sent over the returned
 // channel.
-func MakeMessageReader(conn io.ReadCloser) <-chan *ArborMessage {
-	output := make(chan *ArborMessage)
+func MakeMessageReader(conn io.ReadCloser) <-chan *ProtocolMessage {
+	output := make(chan *ProtocolMessage)
 	go func() {
 		defer close(output)
 		decoder := json.NewDecoder(conn)
 		for {
-			a := &ArborMessage{}
+			a := &ProtocolMessage{}
 			err := decoder.Decode(a)
 			if err != nil {
 				log.Println("Error decoding json:", err)

@@ -1,19 +1,19 @@
-package messages
+package arbor
 
 import "encoding/json"
 
 const (
-	// WelcomeType should be used as the `Type` field of a WELCOME ArborMessage
+	// WelcomeType should be used as the `Type` field of a WELCOME ProtocolMessage
 	WelcomeType = 0
-	// QueryType should be used as the `Type` field of a QUERY ArborMessage
+	// QueryType should be used as the `Type` field of a QUERY ProtocolMessage
 	QueryType = 1
-	// NewMessageType should be used as the `Type` field of a NEW_MESSAGE ArborMessage
+	// NewMessageType should be used as the `Type` field of a NEW_MESSAGE ProtocolMessage
 	NewMessageType = 2
 )
 
-// ArborMessage represents a message in the Arbor chat protocol. This may or
+// ProtocolMessage represents a message in the Arbor chat protocol. This may or
 // may not contain a chat message sent between users.
-type ArborMessage struct {
+type ProtocolMessage struct {
 	// The type of the message, should be one of the constants defined in this
 	// package.
 	Type uint8
@@ -27,11 +27,11 @@ type ArborMessage struct {
 	Minor uint8
 	// Message is the actual chat message content, if any. This is currently only
 	// used in NEW_MESSAGE messages
-	*Message
+	*ChatMessage
 }
 
 // String returns a JSON representation of the message as a string.
-func (m *ArborMessage) String() string {
+func (m *ProtocolMessage) String() string {
 
 	data, _ := json.Marshal(m)
 	dataString := string(data)
