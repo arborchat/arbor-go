@@ -17,13 +17,13 @@ const (
 // ProtocolMessage represents a message in the Arbor chat protocol. This may or
 // may not contain a chat message sent between users.
 type ProtocolMessage struct {
-	// The type of the message, should be one of the constants defined in this
-	// package.
-	Type uint8
 	// Root is only used in WELCOME messages and identifies the root of this server's message tree
 	Root string
 	// Recent is only used in WELCOME messages and provides a list of recently-sent message ids
 	Recent []string
+	// The type of the message, should be one of the constants defined in this
+	// package.
+	Type uint8
 	// Major is only used in WELCOME messages and identifies the major version number of the protocol version in use
 	Major uint8
 	// Minor is only used in WELCOME messages and identifies the minor version number of the protocol version in use
@@ -38,9 +38,9 @@ func (m *ProtocolMessage) MarshalJSON() ([]byte, error) {
 	switch m.Type {
 	case WelcomeType:
 		return json.Marshal(struct {
-			Type   uint8
 			Root   string
 			Recent []string
+			Type   uint8
 			Major  uint8
 			Minor  uint8
 		}{Type: m.Type, Root: m.Root, Recent: m.Recent, Major: m.Major, Minor: m.Minor})
@@ -61,9 +61,7 @@ func (m *ProtocolMessage) MarshalJSON() ([]byte, error) {
 
 // String returns a JSON representation of the message as a string.
 func (m *ProtocolMessage) String() string {
-
-	data, _ := json.Marshal(m)
+	data, _ := json.Marshal(m) // nolint: gosec
 	dataString := string(data)
 	return dataString
-
 }

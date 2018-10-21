@@ -28,7 +28,7 @@ func (s *Store) dispatch() {
 		case msg := <-s.add:
 			s.m[msg.UUID] = msg
 		case id := <-s.request:
-			value, _ := s.m[id]
+			value := s.m[id]
 			s.response <- value
 		}
 	}
