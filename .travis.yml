@@ -1,1 +1,7 @@
 language: go
+install:
+    - curl -L https://git.io/vp6lP | sh && mv ./bin/* $GOPATH/bin/
+script:
+    - go build
+    - go test -v -cover
+    - gometalinter
