@@ -32,7 +32,8 @@ func MakeMessageWriter(conn io.Writer) chan<- *ProtocolMessage {
 // MakeMessageReader wraps the io.Reader and returns a channel of
 // ProtocolMessage pointers. Any JSON received over the io.Reader will
 // be unmarshalled into an ProtocolMessage struct and sent over the returned
-// channel.
+// channel. If invalid JSON is received, the Reader will discard bytes
+// until EOF or it finds valid JSON again.
 func MakeMessageReader(conn io.Reader) <-chan *ProtocolMessage {
 	output := make(chan *ProtocolMessage)
 	go func() {
