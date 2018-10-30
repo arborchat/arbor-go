@@ -37,7 +37,7 @@ func TestMakeMessageReader(t *testing.T) {
 	}
 }
 
-// TestMakeMessageReader checks that MakeMessageReader hangs up when it recieves bad
+// TestMakeMessageReaderInvalid checks that MakeMessageReader hangs up when it recieves bad
 // input.
 func TestMakeMessageReaderInvalid(t *testing.T) {
 	testMsgs := []string{

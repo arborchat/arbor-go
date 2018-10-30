@@ -48,7 +48,12 @@ func MakeMessageReader(conn io.ReadCloser) <-chan *ProtocolMessage {
 					return
 				}
 				// if we received unparsable JSON, just hang up.
-				defer conn.Close()
+				defer func() {
+					if closeErr := conn.Close(); closeErr != nil {
+						log.Println("Error closing connection:", closeErr)
+					}
+				}()
+
 				log.Println("Error decoding json, hanging up:", err)
 				return
 			}

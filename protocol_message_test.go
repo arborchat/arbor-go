@@ -53,6 +53,10 @@ func getInvalid() *arbor.ProtocolMessage {
 	return &arbor.ProtocolMessage{Type: testBadMessageType}
 }
 
+func contains(input string, noneOf []string, eachOf []string) bool {
+	return !containsAnyOf(input, noneOf) && !containsEachOf(input, eachOf)
+}
+
 // TestMarshalJSON ensures that the JSON serialization for each message type works
 // and does not include message fields irrelevant for that message type.
 func TestMarshalJSON(t *testing.T) {
@@ -61,53 +65,26 @@ func TestMarshalJSON(t *testing.T) {
 	newOnlyFields := []string{"Content", "Parent", "Username", "Timestamp"}
 	newAllFields := append(newOnlyFields, "Type", "UUID")
 	queryAllFields := []string{"Type", "UUID"}
-	welcome := getWelcome()
-	byteWelcome, err := welcome.MarshalJSON()
-	if err != nil {
-		t.Error(err)
-	}
-	strWelcome := string(byteWelcome)
+	strWelcome := marshalOrFail(t, getWelcome())
 	if strWelcome == "" {
 		t.Error("Received empty string")
 	}
-	if containsAnyOf(strWelcome, newOnlyFields) {
-		t.Error("Welcome message contained fields from new message", strWelcome)
+	if contains(strWelcome, newOnlyFields, welcomeAllFields) {
+		t.Error("Welcome message contained invalid fields", strWelcome)
 	}
-	if !containsEachOf(strWelcome, welcomeAllFields) {
-		t.Error("Welcome message did not contain all welcome message fields", strWelcome)
-	}
-	newmessage := getNew()
-	byteNewmessage, err := newmessage.MarshalJSON()
-	if err != nil {
-		t.Error(err)
-	}
-	strNewmessage := string(byteNewmessage)
+	strNewmessage := marshalOrFail(t, getNew())
 	if strNewmessage == "" {
 		t.Error("Received empty string")
 	}
-	if containsAnyOf(strNewmessage, welcomeOnlyFields) {
-		t.Error("New message contained fields from welcome message", strNewmessage)
+	if contains(strNewmessage, welcomeOnlyFields, newAllFields) {
+		t.Error("New message contained invalid fields", strNewmessage)
 	}
-	if !containsEachOf(strNewmessage, newAllFields) {
-		t.Error("New message did not contain all new message fields", strNewmessage)
-	}
-	query := getQuery()
-	byteQuery, err := query.MarshalJSON()
-	if err != nil {
-		t.Error(err)
-	}
-	strQuery := string(byteQuery)
+	strQuery := marshalOrFail(t, getQuery())
 	if strQuery == "" {
 		t.Error("Received empty string")
 	}
-	if containsAnyOf(strQuery, welcomeOnlyFields) {
-		t.Error("Query message contained fields from welcome message", strQuery)
-	}
-	if containsAnyOf(strQuery, newOnlyFields) {
-		t.Error("Query message contained fields from new message", strQuery)
-	}
-	if !containsEachOf(strQuery, queryAllFields) {
-		t.Error("New message did not contain all new message fields", strQuery)
+	if contains(strQuery, append(welcomeOnlyFields, newAllFields...), queryAllFields) {
+		t.Error("Query message contained invalid fields", strQuery)
 	}
 	badOutput, err := getInvalid().MarshalJSON()
 	if err == nil {
@@ -116,6 +93,15 @@ func TestMarshalJSON(t *testing.T) {
 	if badOutput != nil {
 		t.Error("Marshalling bad message type should return nil slice, got", badOutput)
 	}
+}
+
+// marshals the message into JSON, failing the test if the marshal returns an error.
+func marshalOrFail(t *testing.T, m *arbor.ProtocolMessage) string {
+	marhalled, err := m.MarshalJSON()
+	if err != nil {
+		t.Error(err)
+	}
+	return string(marhalled)
 }
 
 // TestString ensures that String() returns an non-empty string for valid messages and

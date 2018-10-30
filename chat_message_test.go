@@ -31,14 +31,19 @@ func TestNewChatMessage(t *testing.T) {
 	}
 }
 
-// TestAssignID ensures that the AssignID function actually populates the UUID field
-// of the ChatMessage
-func TestAssignID(t *testing.T) {
+func newMessageOrSkip(t *testing.T, content string) *arbor.ChatMessage {
 	m, err := arbor.NewChatMessage(testContent)
 	if err != nil || m == nil {
 		t.Skip("Unable to create message")
 	}
-	err = m.AssignID()
+	return m
+}
+
+// TestAssignID ensures that the AssignID function actually populates the UUID field
+// of the ChatMessage
+func TestAssignID(t *testing.T) {
+	m := newMessageOrSkip(t, testContent)
+	err := m.AssignID()
 	if err != nil {
 		t.Error("Failed to assign UUID", err)
 		return
@@ -55,11 +60,8 @@ func unreasonableTimestamp(timestamp int64) bool {
 // TestReply ensures that the Reply method creates a new ChatMessage with the correct
 // Parent and Content as well as a reasonable Timestamp.
 func TestReply(t *testing.T) {
-	m, err := arbor.NewChatMessage(testContent)
-	if err != nil || m == nil {
-		t.Skip("Unable to create message")
-	}
-	err = m.AssignID()
+	m := newMessageOrSkip(t, testContent)
+	err := m.AssignID()
 	if err != nil || m.UUID == "" {
 		t.Skip("Failed to assign UUID", err)
 		return
