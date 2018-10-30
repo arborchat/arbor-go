@@ -29,11 +29,12 @@ func MakeMessageWriter(conn io.Writer) chan<- *ProtocolMessage {
 	return input
 }
 
-// MakeMessageReader wraps the io.Reader and returns a channel of
-// ProtocolMessage pointers. Any JSON received over the io.Reader will
+// MakeMessageReader wraps the io.ReadCloser and returns a channel of
+// ProtocolMessage pointers. Any JSON received over the io.ReadCloser will
 // be unmarshalled into an ProtocolMessage struct and sent over the returned
-// channel.
-func MakeMessageReader(conn io.Reader) <-chan *ProtocolMessage {
+// channel. If invalid JSON is received, the ReadCloser will close the TCP connection
+// and the returned channel.
+func MakeMessageReader(conn io.ReadCloser) <-chan *ProtocolMessage {
 	output := make(chan *ProtocolMessage)
 	go func() {
 		defer close(output)
@@ -46,7 +47,15 @@ func MakeMessageReader(conn io.Reader) <-chan *ProtocolMessage {
 					log.Println("Reader connection closed", err)
 					return
 				}
-				log.Println("Error decoding json:", err)
+				// if we received unparsable JSON, just hang up.
+				defer func() {
+					if closeErr := conn.Close(); closeErr != nil {
+						log.Println("Error closing connection:", closeErr)
+					}
+				}()
+
+				log.Println("Error decoding json, hanging up:", err)
+				return
 			}
 			output <- a
 		}

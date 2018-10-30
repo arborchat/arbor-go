@@ -18,7 +18,7 @@ func TestNewStore(t *testing.T) {
 
 func randomMessage() *arbor.ChatMessage {
 	m, _ := arbor.NewChatMessage(strconv.Itoa(rand.Int()))
-	m.AssignID()
+	_ = m.AssignID()
 	m.Username = strconv.Itoa(rand.Int())
 	return m
 }
