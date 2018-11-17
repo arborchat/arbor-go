@@ -49,3 +49,12 @@ func (m *ChatMessage) Reply(content string) (*ChatMessage, error) {
 	reply.Parent = m.UUID
 	return reply, nil
 }
+
+// Equals compares all message fields to determine whether two messages
+// are the same.
+func (m *ChatMessage) Equals(other *ChatMessage) bool {
+	if other == nil {
+		return false
+	}
+	return m.UUID == other.UUID && m.Parent == other.Parent && m.Content == other.Content && m.Username == other.Username && m.Timestamp == other.Timestamp
+}

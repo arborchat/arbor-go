@@ -86,3 +86,43 @@ func TestReply(t *testing.T) {
 		t.Errorf("Timestamp invalid (either in the future or before the epoch): %d", m2.Timestamp)
 	}
 }
+
+// TestEquals checks that the Equals method correctly identifies identical messages.
+func TestEquals(t *testing.T) {
+	m := newMessageOrSkip(t, testContent)
+	if !m.Equals(m) {
+		t.Error("Message reports that it is not equal to itself")
+	}
+	if m.Equals(nil) {
+		t.Error("Non-nil message reports that it is equal to nil")
+	}
+	m2 := *m
+	if !m.Equals(&m2) {
+		t.Error("Message reports that it is not equal to a copy of itself")
+	}
+	m2.Content += "foo"
+	if m.Equals(&m2) {
+		t.Error("Messages with different Content reported as same")
+	}
+	m2.Content = m.Content
+	m2.Parent += "foo"
+	if m.Equals(&m2) {
+		t.Error("Messages with different Parent reported as same")
+	}
+	m2.Parent = m.Parent
+	m2.UUID += "foo"
+	if m.Equals(&m2) {
+		t.Error("Messages with different UUID reported as same")
+	}
+	m2.UUID = m.UUID
+	m2.Username += "foo"
+	if m.Equals(&m2) {
+		t.Error("Messages with different Username reported as same")
+	}
+	m2.Username = m.Username
+	m2.Timestamp++
+	if m.Equals(&m2) {
+		t.Error("Messages with different Timestamp reported as same")
+	}
+	m2.Timestamp = m.Timestamp
+}
