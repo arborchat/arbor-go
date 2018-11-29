@@ -2,8 +2,12 @@ package arbor
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
+	"runtime"
+
+	"github.com/pkg/errors"
 )
 
 // Reader defines the behavior of types that can emit arbor protocol messages
@@ -39,7 +43,25 @@ type ProtocolReader struct{}
 var _ Reader = &ProtocolReader{}
 
 // NewProtocolReader wraps the source to make serializing *ProtocolMessages easy.
-func NewProtocolReader(source io.Reader) (*ProtocolReader, error) {
+func NewProtocolReader(source io.Reader) (reader *ProtocolReader, err error) {
+	if source == nil {
+		return nil, fmt.Errorf("NewProtocolReader cannot wrap nil")
+	}
+	defer func() {
+		// catch typed-nil-related panics
+		if e := recover(); e != nil {
+			cast, isRuntime := e.(runtime.Error)
+			if isRuntime {
+				reader = nil
+				err = errors.Wrapf(cast, "Runtime error when constructing ProtocolReader (typed nil?)")
+			} else {
+				panic(e)
+			}
+		}
+	}()
+	b := make([]byte, 100)
+	n, err := source.Read(b)
+	log.Println(n, err)
 	return nil, nil
 }
 

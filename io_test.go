@@ -1,6 +1,7 @@
 package arbor_test
 
 import (
+	"io"
 	"testing"
 
 	arbor "github.com/arborchat/arbor-go"
@@ -17,6 +18,27 @@ const (
 // nil io.Reader
 func TestNilReader(t *testing.T) {
 	reader, err := arbor.NewProtocolReader(nil)
+	if err == nil {
+		t.Error("NewProtocolReader should error when given a nil io.Reader")
+	}
+	if reader != nil {
+		t.Error("NewProtocolReader should return nil ProtocolReader when given a nil io.Reader")
+	}
+}
+
+type badReader struct{ Field int }
+
+func (b *badReader) Read([]byte) (int, error) {
+	return b.Field, nil // access a property to trigger a nil pointer dereference
+}
+
+// TestTypedNilReader ensures that NewProtocolReader correctly handles being provided with a
+// nil concrete value with a non-nil concrete type wrapped in the io.Reader interface.
+func TestTypedNilReader(t *testing.T) {
+	// create a typed nil
+	var bad *badReader
+	var typedBad io.Reader = bad
+	reader, err := arbor.NewProtocolReader(typedBad)
 	if err == nil {
 		t.Error("NewProtocolReader should error when given a nil io.Reader")
 	}
