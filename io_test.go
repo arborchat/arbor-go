@@ -1,6 +1,8 @@
 package arbor_test
 
 import (
+	"bytes"
+	"encoding/json"
 	"io"
 	"testing"
 
@@ -44,6 +46,37 @@ func TestTypedNilReader(t *testing.T) {
 	}
 	if reader != nil {
 		t.Error("NewProtocolReader should return nil ProtocolReader when given a nil io.Reader")
+	}
+}
+
+// TestReaderRead ensures that we can read a message out of a ProtocolReader when
+// it is given proper input.
+func TestReaderRead(t *testing.T) {
+	buf := new(bytes.Buffer)
+	encoder := json.NewEncoder(buf)
+	welcome := getWelcome()
+	err := encoder.Encode(welcome)
+	if err != nil {
+		t.Skip("Unable to write test data", err)
+	}
+	reader, err := arbor.NewProtocolReader(buf)
+	if err != nil {
+		t.Error("Unable to construct Reader with valid input", err)
+	} else if reader == nil {
+		t.Error("Got nil Reader back when invoking constructor with valid input")
+	}
+	proto := arbor.ProtocolMessage{}
+	err = reader.Read(&proto)
+	if err != nil {
+		t.Error("Expected to be able to read message from buffer", err)
+	}
+	if proto.Type != welcome.Type || proto.Root != welcome.Root || proto.Major != welcome.Major || proto.Minor != welcome.Minor {
+		t.Errorf("Expected %v, found %v", welcome, proto)
+	}
+	for i := 0; i < len(welcome.Recent) && i < len(proto.Recent); i++ {
+		if welcome.Recent[i] != proto.Recent[i] {
+			t.Errorf("Recents don't match, expected %v found %v", welcome.Recent, proto.Recent)
+		}
 	}
 }
 
