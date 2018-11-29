@@ -13,6 +13,18 @@ const (
 	queryExample   = "{\"Type\":1,\"UUID\":\"f4ae0b74-4025-4810-41d6-5148a513c580\"}"
 )
 
+// TestNilReader ensures that NewProtocolReader correctly handles being provided with a
+// nil io.Reader
+func TestNilReader(t *testing.T) {
+	reader, err := arbor.NewProtocolReader(nil)
+	if err == nil {
+		t.Error("NewProtocolReader should error when given a nil io.Reader")
+	}
+	if reader != nil {
+		t.Error("NewProtocolReader should return nil ProtocolReader when given a nil io.Reader")
+	}
+}
+
 // TestMakeMessageReader checks that MakeMessageReader properly reads messages
 // from the input connection.
 func TestMakeMessageReader(t *testing.T) {

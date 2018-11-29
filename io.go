@@ -6,6 +6,64 @@ import (
 	"log"
 )
 
+// Reader defines the behavior of types that can emit arbor protocol messages
+type Reader interface {
+	// Populates the provided ProtocolMessage pointer with the contents of a newly read message
+	Read(*ProtocolMessage) error
+}
+
+// Writer defines the behavior of types that can consume arbor protocol messages
+type Writer interface {
+	// Consumes the provided ProtocolMessage without modifying it
+	Write(*ProtocolMessage) error
+}
+
+// ReadWriter defines the behavior of types that can both emit and consume arbor
+// protocol messages
+type ReadWriter interface {
+	Reader
+	Writer
+}
+
+// ReadWriteCloser defines the behavior of types that can both emit and consume arbor
+// protocol messages that have a logical "Close" operation (file/socket wrappers, for instance)
+type ReadWriteCloser interface {
+	ReadWriter
+	io.Closer
+}
+
+// ProtocolReader reads arbor protocol messages (as JSON) from an io.Reader
+type ProtocolReader struct{}
+
+// ensure ProtocolReader always fulfills the Reader interface
+var _ Reader = &ProtocolReader{}
+
+// NewProtocolReader wraps the source to make serializing *ProtocolMessages easy.
+func NewProtocolReader(source io.Reader) (*ProtocolReader, error) {
+	return nil, nil
+}
+
+// Read attempts to read a JSON-serialized ProtocolMessage from the Reader's source
+// into the provided ProtocolMessage. If the provided message is nil, it will error.
+// This method will block until a ProtocolMessage becomes available.
+func (r *ProtocolReader) Read(into *ProtocolMessage) error {
+	return nil
+}
+
+// ProtocolWriter writes arbor protocol messages (as JSON) to an io.Reader
+type ProtocolWriter struct{}
+
+// ProtocolReadWriter can read and write arbor protocol messages (as JSON) from an io.ReadWriter
+type ProtocolReadWriter struct {
+	ProtocolReader
+	ProtocolWriter
+}
+
+// ProtocolReadWriteCloser can read and write arbor protocol messages (as JSON) from an io.ReadWriteCloser
+type ProtocolReadWriteCloser struct {
+	ProtocolReadWriter
+}
+
 // MakeMessageWriter wraps the io.Writer and returns a channel of
 // ProtocolMessage pointers. Any ProtocolMessage sent over that channel will be
 // written onto the io.Writer as JSON. This function handles all
