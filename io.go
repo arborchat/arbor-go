@@ -35,7 +35,10 @@ type ReadWriteCloser interface {
 }
 
 // ProtocolReader reads arbor protocol messages (as JSON) from an io.Reader
-type ProtocolReader struct{}
+type ProtocolReader struct {
+	in  chan *ProtocolMessage
+	out chan error
+}
 
 // ensure ProtocolReader always fulfills the Reader interface
 var _ Reader = &ProtocolReader{}
@@ -48,14 +51,28 @@ func NewProtocolReader(source io.Reader) (*ProtocolReader, error) {
 	if reflect.ValueOf(source).IsNil() {
 		return nil, fmt.Errorf("NewProtocolReader given io.Reader typed nil")
 	}
-	return nil, nil
+	reader := &ProtocolReader{
+		in:  make(chan *ProtocolMessage),
+		out: make(chan error),
+	}
+	go reader.readLoop(source)
+	return reader, nil
+}
+
+func (r *ProtocolReader) readLoop(conn io.Reader) {
+	defer close(r.out)
+	decoder := json.NewDecoder(conn)
+	for msg := range r.in {
+		r.out <- decoder.Decode(msg)
+	}
 }
 
 // Read attempts to read a JSON-serialized ProtocolMessage from the Reader's source
 // into the provided ProtocolMessage. If the provided message is nil, it will error.
 // This method will block until a ProtocolMessage becomes available.
 func (r *ProtocolReader) Read(into *ProtocolMessage) error {
-	return nil
+	r.in <- into
+	return <-r.out
 }
 
 // ProtocolWriter writes arbor protocol messages (as JSON) to an io.Reader
