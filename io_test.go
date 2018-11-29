@@ -80,6 +80,27 @@ func TestReaderRead(t *testing.T) {
 	}
 }
 
+// TestReaderReadNil ensures that we properly handle nil input to Read.
+func TestReaderReadNil(t *testing.T) {
+	buf := new(bytes.Buffer)
+	encoder := json.NewEncoder(buf)
+	welcome := getWelcome()
+	err := encoder.Encode(welcome)
+	if err != nil {
+		t.Skip("Unable to write test data", err)
+	}
+	reader, err := arbor.NewProtocolReader(buf)
+	if err != nil {
+		t.Error("Unable to construct Reader with valid input", err)
+	} else if reader == nil {
+		t.Error("Got nil Reader back when invoking constructor with valid input")
+	}
+	err = reader.Read(nil)
+	if err == nil {
+		t.Error("Expected an error from trying to read into nil pointer")
+	}
+}
+
 // TestMakeMessageReader checks that MakeMessageReader properly reads messages
 // from the input connection.
 func TestMakeMessageReader(t *testing.T) {
