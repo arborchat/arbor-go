@@ -78,6 +78,20 @@ func (r *ProtocolReader) Read(into *ProtocolMessage) error {
 // ProtocolWriter writes arbor protocol messages (as JSON) to an io.Reader
 type ProtocolWriter struct{}
 
+// ensure that ProtocolWriter satisfies the Writer interface at compile-time
+var _ Writer = &ProtocolWriter{}
+
+// NewProtocolWriter creates a ProtocolWriter by wrapping a destination io.Writer
+func NewProtocolWriter(destination io.Writer) (*ProtocolWriter, error) {
+	return nil, nil
+}
+
+// Write persists the given arbor protocol message into the ProtocolWriter's backing
+// io.Writer
+func (w *ProtocolWriter) Write(from *ProtocolMessage) error {
+	return nil
+}
+
 // ProtocolReadWriter can read and write arbor protocol messages (as JSON) from an io.ReadWriter
 type ProtocolReadWriter struct {
 	ProtocolReader

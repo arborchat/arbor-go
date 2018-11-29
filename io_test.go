@@ -34,6 +34,12 @@ func (b *badReader) Read([]byte) (int, error) {
 	return b.Field, nil // access a property to trigger a nil pointer dereference
 }
 
+type badWriter struct{ Field int }
+
+func (b *badWriter) Write([]byte) (int, error) {
+	return b.Field, nil // access a property to trigger a nil pointer dereference
+}
+
 // TestTypedNilReader ensures that NewProtocolReader correctly handles being provided with a
 // nil concrete value with a non-nil concrete type wrapped in the io.Reader interface.
 func TestTypedNilReader(t *testing.T) {
@@ -96,6 +102,79 @@ func TestReaderReadNil(t *testing.T) {
 		t.Error("Got nil Reader back when invoking constructor with valid input")
 	}
 	err = reader.Read(nil)
+	if err == nil {
+		t.Error("Expected an error from trying to read into nil pointer")
+	}
+}
+
+// TestNilWriter ensures that NewProtocolWriter correctly handles being provided with a
+// nil io.Writer
+func TestNilWriter(t *testing.T) {
+	reader, err := arbor.NewProtocolWriter(nil)
+	if err == nil {
+		t.Error("NewProtocolWriter should error when given a nil io.Writer")
+	}
+	if reader != nil {
+		t.Error("NewProtocolWriter should return nil ProtocolWriter when given a nil io.Writer")
+	}
+}
+
+// TestTypedNilWriter ensures that NewProtocolWriter correctly handles being provided with a
+// nil concrete value with a non-nil concrete type wrapped in the io.Writer interface.
+func TestTypedNilWriter(t *testing.T) {
+	// create a typed nil
+	var bad *badWriter
+	var typedBad io.Writer = bad
+	reader, err := arbor.NewProtocolWriter(typedBad)
+	if err == nil {
+		t.Error("NewProtocolWriter should error when given a nil io.Writer")
+	}
+	if reader != nil {
+		t.Error("NewProtocolWriter should return nil ProtocolWriter when given a nil io.Writer")
+	}
+}
+
+// TestWriterWrite ensures that we can read a message out of a ProtocolWriter when
+// it is given proper input.
+func TestWriterWrite(t *testing.T) {
+	buf := new(bytes.Buffer)
+	decoder := json.NewDecoder(buf)
+	welcome := getWelcome()
+	writer, err := arbor.NewProtocolWriter(buf)
+	if err != nil {
+		t.Error("Unable to construct Writer with valid input", err)
+	} else if writer == nil {
+		t.Error("Got nil Writer back when invoking constructor with valid input")
+	}
+	err = writer.Write(welcome)
+	if err != nil {
+		t.Error("Unable to write message into valid destination", err)
+	}
+	proto := arbor.ProtocolMessage{}
+	err = decoder.Decode(&proto)
+	if err != nil {
+		t.Skip("Unable to read test data", err)
+	}
+	if proto.Type != welcome.Type || proto.Root != welcome.Root || proto.Major != welcome.Major || proto.Minor != welcome.Minor {
+		t.Errorf("Expected %v, found %v", welcome, proto)
+	}
+	for i := 0; i < len(welcome.Recent) && i < len(proto.Recent); i++ {
+		if welcome.Recent[i] != proto.Recent[i] {
+			t.Errorf("Recents don't match, expected %v found %v", welcome.Recent, proto.Recent)
+		}
+	}
+}
+
+// TestWriterWriteNil ensures that we properly handle nil input to Write.
+func TestWriterWriteNil(t *testing.T) {
+	buf := new(bytes.Buffer)
+	writer, err := arbor.NewProtocolWriter(buf)
+	if err != nil {
+		t.Error("Unable to construct Writer with valid input", err)
+	} else if writer == nil {
+		t.Error("Got nil Writer back when invoking constructor with valid input")
+	}
+	err = writer.Write(nil)
 	if err == nil {
 		t.Error("Expected an error from trying to read into nil pointer")
 	}
