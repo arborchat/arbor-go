@@ -185,6 +185,19 @@ func TestWriterWriteNil(t *testing.T) {
 	}
 }
 
+// TestReadWriter ensures that NewProtocolReadWriter returns a valid ProtocolReadWriter when given
+// valid input.
+func TestReadWriter(t *testing.T) {
+	buf := new(bytes.Buffer)
+	rw, err := arbor.NewProtocolReadWriter(buf)
+	if err != nil {
+		t.Error("NewProtocolReadWriter should not error when given a valid io.ReadWriter")
+	}
+	if rw == nil {
+		t.Error("NewProtocolReadWriter should not return nil when given a valid io.ReadWriter")
+	}
+}
+
 // TestNilReadWriter ensures that NewProtocolReadWriter correctly handles being provided with a
 // nil io.ReadWriter
 func TestNilReadWriter(t *testing.T) {

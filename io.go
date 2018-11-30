@@ -120,8 +120,8 @@ func (w *ProtocolWriter) Write(target *ProtocolMessage) error {
 
 // ProtocolReadWriter can read and write arbor protocol messages (as JSON) from an io.ReadWriter
 type ProtocolReadWriter struct {
-	ProtocolReader
-	ProtocolWriter
+	*ProtocolReader
+	*ProtocolWriter
 }
 
 // Ensure that ProtocolReadWriter satisfies ReadWriter at compile time
@@ -130,7 +130,19 @@ var _ ReadWriter = &ProtocolReadWriter{}
 // NewProtocolReadWriter wraps the given io.ReadWriter so that it is possible to both read
 // and write arbor protocol messages to it.
 func NewProtocolReadWriter(wrap io.ReadWriter) (*ProtocolReadWriter, error) {
-	return nil, nil
+	reader, err := NewProtocolReader(wrap)
+	if err != nil {
+		return nil, err
+	}
+	writer, err := NewProtocolWriter(wrap)
+	if err != nil {
+		return nil, err
+	}
+	rw := &ProtocolReadWriter{
+		ProtocolReader: reader,
+		ProtocolWriter: writer,
+	}
+	return rw, nil
 }
 
 // ProtocolReadWriteCloser can read and write arbor protocol messages (as JSON) from an io.ReadWriteCloser
