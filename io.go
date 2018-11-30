@@ -124,6 +124,15 @@ type ProtocolReadWriter struct {
 	ProtocolWriter
 }
 
+// Ensure that ProtocolReadWriter satisfies ReadWriter at compile time
+var _ ReadWriter = &ProtocolReadWriter{}
+
+// NewProtocolReadWriter wraps the given io.ReadWriter so that it is possible to both read
+// and write arbor protocol messages to it.
+func NewProtocolReadWriter(wrap io.ReadWriter) (*ProtocolReadWriter, error) {
+	return nil, nil
+}
+
 // ProtocolReadWriteCloser can read and write arbor protocol messages (as JSON) from an io.ReadWriteCloser
 type ProtocolReadWriteCloser struct {
 	ProtocolReadWriter

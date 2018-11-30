@@ -40,6 +40,11 @@ func (b *badWriter) Write([]byte) (int, error) {
 	return b.Field, nil // access a property to trigger a nil pointer dereference
 }
 
+type badReadWriter struct {
+	badReader
+	badWriter
+}
+
 // TestTypedNilReader ensures that NewProtocolReader correctly handles being provided with a
 // nil concrete value with a non-nil concrete type wrapped in the io.Reader interface.
 func TestTypedNilReader(t *testing.T) {
@@ -177,6 +182,33 @@ func TestWriterWriteNil(t *testing.T) {
 	err = writer.Write(nil)
 	if err == nil {
 		t.Error("Expected an error from trying to read into nil pointer")
+	}
+}
+
+// TestNilReadWriter ensures that NewProtocolReadWriter correctly handles being provided with a
+// nil io.ReadWriter
+func TestNilReadWriter(t *testing.T) {
+	rw, err := arbor.NewProtocolReadWriter(nil)
+	if err == nil {
+		t.Error("NewProtocolReadWriter should error when given a nil io.ReadWriter")
+	}
+	if rw != nil {
+		t.Error("NewProtocolReadWriter should return nil ProtocolReadWriter when given a nil io.ReadWriter")
+	}
+}
+
+// TestTypedNilReadWriter ensures that NewProtocolReadWriter correctly handles being provided with a
+// nil concrete value with a non-nil concrete type wrapped in the io.ReadWriter interface.
+func TestTypedNilReadWriter(t *testing.T) {
+	// create a typed nil
+	var bad *badReadWriter
+	var typedBad io.ReadWriter = bad
+	rw, err := arbor.NewProtocolReadWriter(typedBad)
+	if err == nil {
+		t.Error("NewProtocolReadWriter should error when given a nil io.ReadWriter")
+	}
+	if rw != nil {
+		t.Error("NewProtocolReadWriter should return nil ProtocolReadWriter when given a nil io.ReadWriter")
 	}
 }
 
