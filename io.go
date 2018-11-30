@@ -76,20 +76,46 @@ func (r *ProtocolReader) Read(into *ProtocolMessage) error {
 }
 
 // ProtocolWriter writes arbor protocol messages (as JSON) to an io.Reader
-type ProtocolWriter struct{}
+type ProtocolWriter struct {
+	toWrite   chan *ProtocolMessage
+	writeErrs chan error
+}
 
 // ensure that ProtocolWriter satisfies the Writer interface at compile-time
 var _ Writer = &ProtocolWriter{}
 
 // NewProtocolWriter creates a ProtocolWriter by wrapping a destination io.Writer
 func NewProtocolWriter(destination io.Writer) (*ProtocolWriter, error) {
-	return nil, nil
+	if destination == nil {
+		return nil, fmt.Errorf("NewProtocolWriter cannot wrap nil")
+	}
+	if reflect.ValueOf(destination).IsNil() {
+		return nil, fmt.Errorf("NewProtocolWriter given io.Writer typed nil")
+	}
+	writer := &ProtocolWriter{
+		toWrite:   make(chan *ProtocolMessage),
+		writeErrs: make(chan error),
+	}
+	go writer.writeLoop(destination)
+	return writer, nil
+}
+
+func (w *ProtocolWriter) writeLoop(conn io.Writer) {
+	defer close(w.writeErrs)
+	encoder := json.NewEncoder(conn)
+	for msg := range w.toWrite {
+		w.writeErrs <- encoder.Encode(msg)
+	}
 }
 
 // Write persists the given arbor protocol message into the ProtocolWriter's backing
 // io.Writer
-func (w *ProtocolWriter) Write(from *ProtocolMessage) error {
-	return nil
+func (w *ProtocolWriter) Write(target *ProtocolMessage) error {
+	if target == nil {
+		return fmt.Errorf("Cannot write nil message")
+	}
+	w.toWrite <- target
+	return <-w.writeErrs
 }
 
 // ProtocolReadWriter can read and write arbor protocol messages (as JSON) from an io.ReadWriter

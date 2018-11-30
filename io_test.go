@@ -134,23 +134,23 @@ func TestTypedNilWriter(t *testing.T) {
 	}
 }
 
-// TestWriterWrite ensures that we can read a message out of a ProtocolWriter when
+// TestWriterWrite ensures that we can write a message with a ProtocolWriter when
 // it is given proper input.
 func TestWriterWrite(t *testing.T) {
 	buf := new(bytes.Buffer)
-	decoder := json.NewDecoder(buf)
-	welcome := getWelcome()
 	writer, err := arbor.NewProtocolWriter(buf)
 	if err != nil {
 		t.Error("Unable to construct Writer with valid input", err)
 	} else if writer == nil {
 		t.Error("Got nil Writer back when invoking constructor with valid input")
 	}
+	welcome := getWelcome()
 	err = writer.Write(welcome)
 	if err != nil {
 		t.Error("Unable to write message into valid destination", err)
 	}
 	proto := arbor.ProtocolMessage{}
+	decoder := json.NewDecoder(buf)
 	err = decoder.Decode(&proto)
 	if err != nil {
 		t.Skip("Unable to read test data", err)
