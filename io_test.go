@@ -90,13 +90,8 @@ func TestReaderRead(t *testing.T) {
 	if err != nil {
 		t.Error("Expected to be able to read message from buffer", err)
 	}
-	if proto.Type != welcome.Type || proto.Root != welcome.Root || proto.Major != welcome.Major || proto.Minor != welcome.Minor {
-		t.Errorf("Expected %v, found %v", welcome, proto)
-	}
-	for i := 0; i < len(welcome.Recent) && i < len(proto.Recent); i++ {
-		if welcome.Recent[i] != proto.Recent[i] {
-			t.Errorf("Recents don't match, expected %v found %v", welcome.Recent, proto.Recent)
-		}
+	if !proto.Equals(welcome) {
+		t.Errorf("Expected %v, got %v", welcome, proto)
 	}
 }
 
@@ -169,13 +164,9 @@ func TestWriterWrite(t *testing.T) {
 	if err != nil {
 		t.Skip("Unable to read test data", err)
 	}
-	if proto.Type != welcome.Type || proto.Root != welcome.Root || proto.Major != welcome.Major || proto.Minor != welcome.Minor {
+	if !proto.Equals(welcome) {
+		t.Log(proto.ChatMessage, welcome.ChatMessage)
 		t.Errorf("Expected %v, found %v", welcome, proto)
-	}
-	for i := 0; i < len(welcome.Recent) && i < len(proto.Recent); i++ {
-		if welcome.Recent[i] != proto.Recent[i] {
-			t.Errorf("Recents don't match, expected %v found %v", welcome.Recent, proto.Recent)
-		}
 	}
 }
 
