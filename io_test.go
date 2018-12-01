@@ -45,6 +45,22 @@ type badReadWriter struct {
 	badWriter
 }
 
+func (b *badReadWriter) Close() error {
+	return nil
+}
+
+type detectableCloser struct {
+	io.ReadWriter
+	closed bool
+}
+
+var _ io.ReadWriteCloser = &detectableCloser{}
+
+func (c *detectableCloser) Close() error {
+	c.closed = true
+	return nil
+}
+
 // TestTypedNilReader ensures that NewProtocolReader correctly handles being provided with a
 // nil concrete value with a non-nil concrete type wrapped in the io.Reader interface.
 func TestTypedNilReader(t *testing.T) {
@@ -189,7 +205,7 @@ func TestWriterWriteNil(t *testing.T) {
 // valid input.
 func TestReadWriter(t *testing.T) {
 	buf := new(bytes.Buffer)
-	rw, err := arbor.NewProtocolReadWriter(buf)
+	rw, err := arbor.NewProtocolReadWriter(arbor.NoopRWCloser(buf))
 	if err != nil {
 		t.Error("NewProtocolReadWriter should not error when given a valid io.ReadWriter")
 	}
@@ -215,7 +231,7 @@ func TestNilReadWriter(t *testing.T) {
 func TestTypedNilReadWriter(t *testing.T) {
 	// create a typed nil
 	var bad *badReadWriter
-	var typedBad io.ReadWriter = bad
+	var typedBad io.ReadWriteCloser = bad
 	rw, err := arbor.NewProtocolReadWriter(typedBad)
 	if err == nil {
 		t.Error("NewProtocolReadWriter should error when given a nil io.ReadWriter")
@@ -223,6 +239,31 @@ func TestTypedNilReadWriter(t *testing.T) {
 	if rw != nil {
 		t.Error("NewProtocolReadWriter should return nil ProtocolReadWriter when given a nil io.ReadWriter")
 	}
+}
+
+// TestProtocolRWClose ensures that the Close method on ProtocolReadWriteClosers closes the underlying
+// io.ReadWriteCloser and returns an error when you attempt to close it more than once.
+func TestProtocolRWClose(t *testing.T) {
+	detect := &detectableCloser{ReadWriter: new(bytes.Buffer)}
+	closer, err := arbor.NewProtocolReadWriter(detect)
+	if err != nil {
+		t.Skip("Failed to construct ProtocolReadWriteCloser", err)
+	}
+	if detect.closed {
+		t.Error("ProtocolReadWriteCloser should not close underlying io.ReadWriteCloser unasked")
+	}
+	err = closer.Close()
+	if err != nil {
+		t.Error("Should have been able to close open underlying io.ReadWriteCloser", err)
+	}
+	if !detect.closed {
+		t.Error("After Close(), underlying io.ReadWriteCloser should be closed")
+	}
+	err = closer.Close()
+	if err == nil {
+		t.Error("closing underlying io.ReadWriteCloser twice should have errored")
+	}
+
 }
 
 // TestMakeMessageReader checks that MakeMessageReader properly reads messages

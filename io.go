@@ -8,6 +8,18 @@ import (
 	"reflect"
 )
 
+type closeable struct {
+	io.ReadWriter
+}
+
+func (c closeable) Close() error {
+	return nil
+}
+
+func NoopRWCloser(in io.ReadWriter) io.ReadWriteCloser {
+	return closeable{in}
+}
+
 // Reader defines the behavior of types that can emit arbor protocol messages
 type Reader interface {
 	// Populates the provided ProtocolMessage pointer with the contents of a newly read message
@@ -43,12 +55,16 @@ type ProtocolReader struct {
 // ensure ProtocolReader always fulfills the Reader interface
 var _ Reader = &ProtocolReader{}
 
+func isNilPointer(in interface{}) bool {
+	return reflect.ValueOf(in).Kind() == reflect.Ptr && reflect.ValueOf(in).IsNil()
+}
+
 // NewProtocolReader wraps the source to make serializing *ProtocolMessages easy.
 func NewProtocolReader(source io.Reader) (*ProtocolReader, error) {
 	if source == nil {
 		return nil, fmt.Errorf("NewProtocolReader cannot wrap nil")
 	}
-	if reflect.ValueOf(source).IsNil() {
+	if isNilPointer(source) {
 		return nil, fmt.Errorf("NewProtocolReader given io.Reader typed nil")
 	}
 	reader := &ProtocolReader{
@@ -75,6 +91,10 @@ func (r *ProtocolReader) Read(into *ProtocolMessage) error {
 	return <-r.out
 }
 
+func (r *ProtocolReader) stop() {
+	close(r.in)
+}
+
 // ProtocolWriter writes arbor protocol messages (as JSON) to an io.Reader
 type ProtocolWriter struct {
 	toWrite   chan *ProtocolMessage
@@ -89,7 +109,7 @@ func NewProtocolWriter(destination io.Writer) (*ProtocolWriter, error) {
 	if destination == nil {
 		return nil, fmt.Errorf("NewProtocolWriter cannot wrap nil")
 	}
-	if reflect.ValueOf(destination).IsNil() {
+	if isNilPointer(destination) {
 		return nil, fmt.Errorf("NewProtocolWriter given io.Writer typed nil")
 	}
 	writer := &ProtocolWriter{
@@ -108,6 +128,10 @@ func (w *ProtocolWriter) writeLoop(conn io.Writer) {
 	}
 }
 
+func (w *ProtocolWriter) stop() {
+	close(w.toWrite)
+}
+
 // Write persists the given arbor protocol message into the ProtocolWriter's backing
 // io.Writer
 func (w *ProtocolWriter) Write(target *ProtocolMessage) error {
@@ -122,14 +146,16 @@ func (w *ProtocolWriter) Write(target *ProtocolMessage) error {
 type ProtocolReadWriter struct {
 	*ProtocolReader
 	*ProtocolWriter
+	closeReq chan struct{}
+	closeRes chan error
 }
 
-// Ensure that ProtocolReadWriter satisfies ReadWriter at compile time
-var _ ReadWriter = &ProtocolReadWriter{}
+// Ensure that ProtocolReadWriteCloser statisfies ReadWriteCloser at compile time
+var _ ReadWriteCloser = &ProtocolReadWriter{}
 
 // NewProtocolReadWriter wraps the given io.ReadWriter so that it is possible to both read
 // and write arbor protocol messages to it.
-func NewProtocolReadWriter(wrap io.ReadWriter) (*ProtocolReadWriter, error) {
+func NewProtocolReadWriter(wrap io.ReadWriteCloser) (*ProtocolReadWriter, error) {
 	reader, err := NewProtocolReader(wrap)
 	if err != nil {
 		return nil, err
@@ -141,13 +167,35 @@ func NewProtocolReadWriter(wrap io.ReadWriter) (*ProtocolReadWriter, error) {
 	rw := &ProtocolReadWriter{
 		ProtocolReader: reader,
 		ProtocolWriter: writer,
+		closeReq:       make(chan struct{}),
+		closeRes:       make(chan error),
 	}
+	go rw.closeWait(wrap)
 	return rw, nil
 }
 
-// ProtocolReadWriteCloser can read and write arbor protocol messages (as JSON) from an io.ReadWriteCloser
-type ProtocolReadWriteCloser struct {
-	ProtocolReadWriter
+func (c *ProtocolReadWriter) closeWait(target io.Closer) {
+	defer close(c.closeRes)
+	<-c.closeReq
+	c.ProtocolReader.stop()
+	c.ProtocolWriter.stop()
+	c.closeRes <- target.Close()
+}
+
+// Close both closes the io.ReadWriteCloser wrapped by this ProtocolReadWriter and tears down all
+// protocol-related internal structure. Once you close a ProtocolReadWriter, you must create a new
+// one in order to use it again.
+func (c *ProtocolReadWriter) Close() (err error) {
+	defer func() {
+		recovered := recover()
+		if recovered == nil {
+			err = nil
+		} else {
+			err = recovered.(error)
+		}
+	}()
+	close(c.closeReq) // signal that we should shut everything down
+	return <-c.closeRes
 }
 
 // MakeMessageWriter wraps the io.Writer and returns a channel of
