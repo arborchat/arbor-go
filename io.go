@@ -16,6 +16,9 @@ func (c closeable) Close() error {
 	return nil
 }
 
+// NoopRWCloser wraps an io.ReadWriter with an implementation of io.Closer's
+// Close() method that does nothing. It's like ioutil.NoopCloser but for
+// io.ReadWriters instead of just io.Readers.
 func NoopRWCloser(in io.ReadWriter) io.ReadWriteCloser {
 	return closeable{in}
 }

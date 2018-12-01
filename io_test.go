@@ -28,24 +28,17 @@ func TestNilReader(t *testing.T) {
 	}
 }
 
-type badReader struct{ Field int }
+type badReadWriteCloser struct{ Field int }
 
-func (b *badReader) Read([]byte) (int, error) {
+func (b *badReadWriteCloser) Read([]byte) (int, error) {
 	return b.Field, nil // access a property to trigger a nil pointer dereference
 }
 
-type badWriter struct{ Field int }
-
-func (b *badWriter) Write([]byte) (int, error) {
+func (b *badReadWriteCloser) Write([]byte) (int, error) {
 	return b.Field, nil // access a property to trigger a nil pointer dereference
 }
 
-type badReadWriter struct {
-	badReader
-	badWriter
-}
-
-func (b *badReadWriter) Close() error {
+func (b *badReadWriteCloser) Close() error {
 	return nil
 }
 
@@ -65,7 +58,7 @@ func (c *detectableCloser) Close() error {
 // nil concrete value with a non-nil concrete type wrapped in the io.Reader interface.
 func TestTypedNilReader(t *testing.T) {
 	// create a typed nil
-	var bad *badReader
+	var bad *badReadWriteCloser
 	var typedBad io.Reader = bad
 	reader, err := arbor.NewProtocolReader(typedBad)
 	if err == nil {
@@ -144,7 +137,7 @@ func TestNilWriter(t *testing.T) {
 // nil concrete value with a non-nil concrete type wrapped in the io.Writer interface.
 func TestTypedNilWriter(t *testing.T) {
 	// create a typed nil
-	var bad *badWriter
+	var bad *badReadWriteCloser
 	var typedBad io.Writer = bad
 	reader, err := arbor.NewProtocolWriter(typedBad)
 	if err == nil {
@@ -230,7 +223,7 @@ func TestNilReadWriter(t *testing.T) {
 // nil concrete value with a non-nil concrete type wrapped in the io.ReadWriter interface.
 func TestTypedNilReadWriter(t *testing.T) {
 	// create a typed nil
-	var bad *badReadWriter
+	var bad *badReadWriteCloser
 	var typedBad io.ReadWriteCloser = bad
 	rw, err := arbor.NewProtocolReadWriter(typedBad)
 	if err == nil {
