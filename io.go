@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"reflect"
+	"sync"
 )
 
 type closeable struct {
@@ -51,6 +52,8 @@ type ReadWriteCloser interface {
 
 // ProtocolReader reads arbor protocol messages (as JSON) from an io.Reader
 type ProtocolReader struct {
+	closed bool
+	sync.RWMutex
 	in  chan *ProtocolMessage
 	out chan error
 }
@@ -90,16 +93,25 @@ func (r *ProtocolReader) readLoop(conn io.Reader) {
 // into the provided ProtocolMessage. If the provided message is nil, it will error.
 // This method will block until a ProtocolMessage becomes available.
 func (r *ProtocolReader) Read(into *ProtocolMessage) error {
+	r.RLock()
+	defer r.RUnlock()
+	if r.closed {
+		return fmt.Errorf("Reading from closed reader")
+	}
 	r.in <- into
 	return <-r.out
 }
 
 func (r *ProtocolReader) stop() {
+	r.Lock()
+	defer r.Unlock()
 	close(r.in)
 }
 
 // ProtocolWriter writes arbor protocol messages (as JSON) to an io.Reader
 type ProtocolWriter struct {
+	sync.RWMutex
+	closed    bool
 	toWrite   chan *ProtocolMessage
 	writeErrs chan error
 }
@@ -132,6 +144,8 @@ func (w *ProtocolWriter) writeLoop(conn io.Writer) {
 }
 
 func (w *ProtocolWriter) stop() {
+	w.Lock()
+	defer w.Unlock()
 	close(w.toWrite)
 }
 
@@ -140,6 +154,11 @@ func (w *ProtocolWriter) stop() {
 func (w *ProtocolWriter) Write(target *ProtocolMessage) error {
 	if target == nil {
 		return fmt.Errorf("Cannot write nil message")
+	}
+	w.RLock()
+	defer w.RUnlock()
+	if w.closed {
+		return fmt.Errorf("Cannot write into closed Writer")
 	}
 	w.toWrite <- target
 	return <-w.writeErrs
