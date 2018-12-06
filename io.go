@@ -105,6 +105,7 @@ func (r *ProtocolReader) Read(into *ProtocolMessage) error {
 func (r *ProtocolReader) stop() {
 	r.Lock()
 	defer r.Unlock()
+	r.closed = true
 	close(r.in)
 }
 
@@ -146,6 +147,7 @@ func (w *ProtocolWriter) writeLoop(conn io.Writer) {
 func (w *ProtocolWriter) stop() {
 	w.Lock()
 	defer w.Unlock()
+	w.closed = true
 	close(w.toWrite)
 }
 

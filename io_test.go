@@ -247,7 +247,15 @@ func TestProtocolRWClose(t *testing.T) {
 	if err == nil {
 		t.Error("closing underlying io.ReadWriteCloser twice should have errored")
 	}
-
+	//ensure can't read or write
+	err = closer.Read(new(arbor.ProtocolMessage))
+	if err == nil {
+		t.Error("Should error trying to read closed RWC")
+	}
+	err = closer.Write(new(arbor.ProtocolMessage))
+	if err == nil {
+		t.Error("Should error trying to write closed RWC")
+	}
 }
 
 // TestMakeMessageReader checks that MakeMessageReader properly reads messages
