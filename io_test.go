@@ -8,6 +8,7 @@ import (
 
 	arbor "github.com/arborchat/arbor-go"
 	"github.com/jordwest/mock-conn"
+	"github.com/onsi/gomega"
 )
 
 const (
@@ -92,6 +93,26 @@ func TestReaderRead(t *testing.T) {
 	}
 	if !proto.Equals(welcome) {
 		t.Errorf("Expected %v, got %v", welcome, proto)
+	}
+}
+
+// TestReaderInvalid ensures that we reject incomplete messages when we read them.
+func TestReaderInvalid(t *testing.T) {
+	g := gomega.NewGomegaWithT(t)
+	buf := new(bytes.Buffer)
+	for _, bad := range []string{"{\"Type\":1}", "{\"Type\":2}"} {
+		if _, err := buf.Write([]byte(bad)); err != nil {
+			t.Skip(err)
+		}
+		reader, err := arbor.NewProtocolReader(buf)
+		if err != nil {
+			t.Skip("Unable to construct Reader with valid input", err)
+		} else if reader == nil {
+			t.Skip("Got nil Reader back when invoking constructor with valid input")
+		}
+		proto := arbor.ProtocolMessage{}
+		err = reader.Read(&proto)
+		g.Expect(err).ToNot(gomega.BeNil())
 	}
 }
 

@@ -103,3 +103,65 @@ func (m *ProtocolMessage) String() string {
 	dataString := string(data)
 	return dataString
 }
+
+// IsValid returns whether the message has the minimum correct fields for its message
+// type.
+func (m *ProtocolMessage) IsValid() bool {
+	switch m.Type {
+	case WelcomeType:
+		return m.IsValidWelcome()
+	case QueryType:
+		return m.IsValidQuery()
+	case NewMessageType:
+		return m.IsValidNew()
+	default:
+		return false
+	}
+}
+
+// IsValidWelcome checks that the message is a valid Welcome message.
+func (m *ProtocolMessage) IsValidWelcome() bool {
+	switch {
+	case m.Type != WelcomeType:
+		fallthrough
+	case m.Major == 0 && m.Minor == 0:
+		fallthrough
+	case m.Recent == nil:
+		fallthrough
+	case m.Root == "":
+		return false
+	}
+	return true
+}
+
+// IsValidNew checks that the message is a valid New message.
+func (m *ProtocolMessage) IsValidNew() bool {
+	switch {
+	case m.Type != NewMessageType:
+		fallthrough
+	case m.ChatMessage == nil:
+		fallthrough
+	case m.Username == "":
+		fallthrough
+	case m.Parent == "":
+		fallthrough
+	case m.Content == "":
+		fallthrough
+	case m.Timestamp == 0:
+		return false
+	}
+	return true
+}
+
+// IsValidQuery checks that the message is a valid Query message.
+func (m *ProtocolMessage) IsValidQuery() bool {
+	switch {
+	case m.Type != QueryType:
+		fallthrough
+	case m.ChatMessage == nil:
+		fallthrough
+	case m.UUID == "":
+		return false
+	}
+	return true
+}

@@ -85,7 +85,14 @@ func (r *ProtocolReader) readLoop(conn io.Reader) {
 	defer close(r.out)
 	decoder := json.NewDecoder(conn)
 	for msg := range r.in {
-		r.out <- decoder.Decode(msg)
+		err := decoder.Decode(msg)
+		if err != nil {
+			r.out <- err
+		} else if !msg.IsValid() {
+			r.out <- fmt.Errorf("Read invalid message %v", msg)
+		} else {
+			r.out <- nil
+		}
 	}
 }
 
