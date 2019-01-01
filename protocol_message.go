@@ -204,6 +204,7 @@ func (m *ProtocolMessage) IsValidQuery() bool {
 	return true
 }
 
+// IsValidMeta returns whether the message is valid as a META-type protocol message.
 func (m *ProtocolMessage) IsValidMeta() bool {
 	switch {
 	case m.Type != MetaType:
