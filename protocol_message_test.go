@@ -49,6 +49,13 @@ func getQuery() *arbor.ProtocolMessage {
 	}
 }
 
+func getMeta() *arbor.ProtocolMessage {
+	return &arbor.ProtocolMessage{
+		Type: arbor.MetaType,
+		Meta: map[string]string{"key": "value"},
+	}
+}
+
 func getInvalid() *arbor.ProtocolMessage {
 	return &arbor.ProtocolMessage{Type: testBadMessageType}
 }
@@ -64,27 +71,36 @@ func TestMarshalJSON(t *testing.T) {
 	welcomeAllFields := append(welcomeOnlyFields, "Type")
 	newOnlyFields := []string{"Content", "Parent", "Username", "Timestamp"}
 	newAllFields := append(newOnlyFields, "Type", "UUID")
+	metaOnlyFields := []string{"Meta"}
+	metaAllFields := append(metaOnlyFields, "Type")
 	queryAllFields := []string{"Type", "UUID"}
 	strWelcome := marshalOrFail(t, getWelcome())
 	if strWelcome == "" {
 		t.Error("Received empty string")
 	}
-	if contains(strWelcome, newOnlyFields, welcomeAllFields) {
+	if contains(strWelcome, append(newOnlyFields, metaOnlyFields...), welcomeAllFields) {
 		t.Error("Welcome message contained invalid fields", strWelcome)
 	}
 	strNewmessage := marshalOrFail(t, getNew())
 	if strNewmessage == "" {
 		t.Error("Received empty string")
 	}
-	if contains(strNewmessage, welcomeOnlyFields, newAllFields) {
+	if contains(strNewmessage, append(welcomeOnlyFields, metaOnlyFields...), newAllFields) {
 		t.Error("New message contained invalid fields", strNewmessage)
 	}
 	strQuery := marshalOrFail(t, getQuery())
 	if strQuery == "" {
 		t.Error("Received empty string")
 	}
-	if contains(strQuery, append(welcomeOnlyFields, newAllFields...), queryAllFields) {
+	if contains(strQuery, append(append(welcomeOnlyFields, newAllFields...), metaOnlyFields...), queryAllFields) {
 		t.Error("Query message contained invalid fields", strQuery)
+	}
+	strMeta := marshalOrFail(t, getMeta())
+	if strMeta == "" {
+		t.Error("Received empty string")
+	}
+	if contains(strMeta, append(welcomeOnlyFields, newAllFields...), metaAllFields) {
+		t.Error("Query message contained invalid fields", strMeta)
 	}
 	badOutput, err := getInvalid().MarshalJSON()
 	if err == nil {
