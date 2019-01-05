@@ -139,3 +139,21 @@ func containsEachOf(input string, targets []string) bool {
 	}
 	return count == len(targets)
 }
+
+// TestRootIsValid ensures that our validation logic for messages takes the special properties
+// of root messages (namely their lack of a parent id) into account.
+func TestRootIsValid(t *testing.T) {
+	rootMsg := &arbor.ProtocolMessage{
+		Type: arbor.NewMessageType,
+		ChatMessage: &arbor.ChatMessage{
+			UUID:      "Something",
+			Parent:    "",
+			Username:  "thing",
+			Content:   "Stuff",
+			Timestamp: time.Now().Unix(),
+		},
+	}
+	if !rootMsg.IsValid() {
+		t.Error("Root message should be considered valid")
+	}
+}
