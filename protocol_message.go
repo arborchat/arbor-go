@@ -143,8 +143,6 @@ func (m *ProtocolMessage) IsValidNew() bool {
 		fallthrough
 	case m.Username == "":
 		fallthrough
-	case m.Parent == "":
-		fallthrough
 	case m.Content == "":
 		fallthrough
 	case m.Timestamp == 0:
