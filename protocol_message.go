@@ -12,7 +12,14 @@ const (
 	QueryType = 1
 	// NewMessageType should be used as the `Type` field of a NEW_MESSAGE ProtocolMessage
 	NewMessageType = 2
+	// NewType is the `Type` of a NEW Message
+	NewType = 2
+	// MetaType is the `Type` of a META Message
+	MetaType = 3
 )
+
+// Message is a protocol-layer message in Arbor
+type Message ProtocolMessage
 
 // ProtocolMessage represents a message in the Arbor chat protocol. This may or
 // may not contain a chat message sent between users.
@@ -31,6 +38,8 @@ type ProtocolMessage struct {
 	// Message is the actual chat message content, if any. This is currently only
 	// used in NEW_MESSAGE messages
 	*ChatMessage
+	// Meta is the `Meta` field in META type arbor messages.
+	Meta map[string]string
 }
 
 // Equals returns true if other is equivalent to the message (has the same data or is the same message)
@@ -52,6 +61,9 @@ func (m *ProtocolMessage) Equals(other *ProtocolMessage) bool {
 	if !sameSlice(m.Recent, other.Recent) {
 		return false
 	}
+	if !sameMap(m.Meta, other.Meta) {
+		return false
+	}
 	return true
 }
 
@@ -65,6 +77,21 @@ func sameSlice(a, b []string) bool {
 	}
 	for i, v := range a {
 		if v != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func sameMap(a, b map[string]string) bool {
+	if (a == nil) != (b == nil) {
+		return false
+	}
+	if len(a) != len(b) {
+		return false
+	}
+	for key, val := range a {
+		if val != b[key] {
 			return false
 		}
 	}
@@ -92,6 +119,11 @@ func (m *ProtocolMessage) MarshalJSON() ([]byte, error) {
 			*ChatMessage
 			Type uint8
 		}{ChatMessage: m.ChatMessage, Type: m.Type})
+	case MetaType:
+		return json.Marshal(struct {
+			Meta map[string]string
+			Type uint8
+		}{Type: m.Type, Meta: m.Meta})
 	default:
 		return nil, fmt.Errorf("Unknown message type, could not marshal")
 	}
@@ -114,6 +146,8 @@ func (m *ProtocolMessage) IsValid() bool {
 		return m.IsValidQuery()
 	case NewMessageType:
 		return m.IsValidNew()
+	case MetaType:
+		return m.IsValidMeta()
 	default:
 		return false
 	}
@@ -127,6 +161,8 @@ func (m *ProtocolMessage) IsValidWelcome() bool {
 	case m.Major == 0 && m.Minor == 0:
 		fallthrough
 	case m.Recent == nil:
+		fallthrough
+	case m.Meta != nil && len(m.Meta) != 0:
 		fallthrough
 	case m.Root == "":
 		return false
@@ -145,6 +181,8 @@ func (m *ProtocolMessage) IsValidNew() bool {
 		fallthrough
 	case m.Content == "":
 		fallthrough
+	case m.Meta != nil && len(m.Meta) != 0:
+		fallthrough
 	case m.Timestamp == 0:
 		return false
 	}
@@ -158,7 +196,28 @@ func (m *ProtocolMessage) IsValidQuery() bool {
 		fallthrough
 	case m.ChatMessage == nil:
 		fallthrough
+	case m.Meta != nil && len(m.Meta) != 0:
+		fallthrough
 	case m.UUID == "":
+		return false
+	}
+	return true
+}
+
+// IsValidMeta returns whether the message is valid as a META-type protocol message.
+func (m *ProtocolMessage) IsValidMeta() bool {
+	switch {
+	case m.Type != MetaType:
+		fallthrough
+	case m.Meta == nil:
+		fallthrough
+	case m.ChatMessage != nil:
+		fallthrough
+	case m.Major != 0 || m.Minor != 0:
+		fallthrough
+	case m.Root != "":
+		fallthrough
+	case m.Recent != nil:
 		return false
 	}
 	return true

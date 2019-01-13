@@ -49,6 +49,13 @@ func getQuery() *arbor.ProtocolMessage {
 	}
 }
 
+func getMeta() *arbor.ProtocolMessage {
+	return &arbor.ProtocolMessage{
+		Type: arbor.MetaType,
+		Meta: map[string]string{"key": "value"},
+	}
+}
+
 func getInvalid() *arbor.ProtocolMessage {
 	return &arbor.ProtocolMessage{Type: testBadMessageType}
 }
@@ -57,35 +64,68 @@ func contains(input string, noneOf []string, eachOf []string) bool {
 	return !containsAnyOf(input, noneOf) && !containsEachOf(input, eachOf)
 }
 
-// TestMarshalJSON ensures that the JSON serialization for each message type works
+var (
+	// define fields that are only legal in specific message types for use in
+	// serialization tests
+	welcomeOnlyFields = []string{"Root", "Recent", "Major", "Minor"}
+	welcomeAllFields  = append(welcomeOnlyFields, "Type")
+	newOnlyFields     = []string{"Content", "Parent", "Username", "Timestamp"}
+	newAllFields      = append(newOnlyFields, "Type", "UUID")
+	metaOnlyFields    = []string{"Meta"}
+	metaAllFields     = append(metaOnlyFields, "Type")
+	queryAllFields    = []string{"Type", "UUID"}
+)
+
+// TestMarshalJSONWelcome ensures that the JSON serialization for WELCOME messages works
 // and does not include message fields irrelevant for that message type.
-func TestMarshalJSON(t *testing.T) {
-	welcomeOnlyFields := []string{"Root", "Recent", "Major", "Minor"}
-	welcomeAllFields := append(welcomeOnlyFields, "Type")
-	newOnlyFields := []string{"Content", "Parent", "Username", "Timestamp"}
-	newAllFields := append(newOnlyFields, "Type", "UUID")
-	queryAllFields := []string{"Type", "UUID"}
+func TestMarshalJSONWelcome(t *testing.T) {
 	strWelcome := marshalOrFail(t, getWelcome())
 	if strWelcome == "" {
 		t.Error("Received empty string")
 	}
-	if contains(strWelcome, newOnlyFields, welcomeAllFields) {
+	if contains(strWelcome, append(newOnlyFields, metaOnlyFields...), welcomeAllFields) {
 		t.Error("Welcome message contained invalid fields", strWelcome)
 	}
+}
+
+// TestMarshalJSONNew ensures that the JSON serialization for NEW messages works
+// and does not include message fields irrelevant for that message type.
+func TestMarshalJSONNew(t *testing.T) {
 	strNewmessage := marshalOrFail(t, getNew())
 	if strNewmessage == "" {
 		t.Error("Received empty string")
 	}
-	if contains(strNewmessage, welcomeOnlyFields, newAllFields) {
+	if contains(strNewmessage, append(welcomeOnlyFields, metaOnlyFields...), newAllFields) {
 		t.Error("New message contained invalid fields", strNewmessage)
 	}
+}
+
+// TestMarshalJSONQuery ensures that the JSON serialization for QUERY messages works
+// and does not include message fields irrelevant for that message type.
+func TestMarshalJSONQuery(t *testing.T) {
 	strQuery := marshalOrFail(t, getQuery())
 	if strQuery == "" {
 		t.Error("Received empty string")
 	}
-	if contains(strQuery, append(welcomeOnlyFields, newAllFields...), queryAllFields) {
+	if contains(strQuery, append(append(welcomeOnlyFields, newAllFields...), metaOnlyFields...), queryAllFields) {
 		t.Error("Query message contained invalid fields", strQuery)
 	}
+}
+
+// TestMarshalJSONMeta ensures that the JSON serialization for META messages works
+// and does not include message fields irrelevant for that message type.
+func TestMarshalJSONMeta(t *testing.T) {
+	strMeta := marshalOrFail(t, getMeta())
+	if strMeta == "" {
+		t.Error("Received empty string")
+	}
+	if contains(strMeta, append(welcomeOnlyFields, newAllFields...), metaAllFields) {
+		t.Error("Query message contained invalid fields", strMeta)
+	}
+}
+
+// TestMarshalJSONInvalid ensures that the JSON serialization for invalid messages fails
+func TestMarshalJSONInvalid(t *testing.T) {
 	badOutput, err := getInvalid().MarshalJSON()
 	if err == nil {
 		t.Error("Marshalling bad message type should be error")

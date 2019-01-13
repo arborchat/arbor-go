@@ -7,6 +7,9 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Post is a single chat message within Arbor
+type Post ChatMessage
+
 // ChatMessage represents a single chat message sent between users.
 type ChatMessage struct {
 	UUID      string
