@@ -1,12 +1,11 @@
 language: go
+go:
+    - 1.11.x
+    - 1.12.x
 install:
-    # install gometalinter
-    - curl -L https://git.io/vp6lP | sh && mv ./bin/* $GOPATH/bin/
-    # install dep
-    - curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-    # install dependencies
-    - dep ensure
+    # install golangci-lint
+    - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin v1.16.0
 script:
     - go build
     - go test -v -cover
-    - gometalinter
+    - golangci-lint run
