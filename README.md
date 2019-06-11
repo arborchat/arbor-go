@@ -7,6 +7,8 @@
 This is a Golang library implementation of the Arbor chat protocol. It allows
 you to send and recieve messages over any `io.ReadCloser` and `io.WriteCloser`.
 
+You can get information about the Arbor project [here](https://man.sr.ht/~whereswaldon/arborchat/).
+
 ## Contribute
 
 PRs and suggestions welcome!
